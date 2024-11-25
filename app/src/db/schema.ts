@@ -86,23 +86,14 @@ export const createTables = (tx: SQLTransaction) => {
     );
   `);
 
-  // Orders table
+  // Orders table with transaction_id
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       product_id INTEGER,
       quantity INTEGER NOT NULL,
-      FOREIGN KEY (product_id) REFERENCES products (id)
-    );
-  `);
-
-  // Transaction orders table
-  tx.executeSql(`
-    CREATE TABLE IF NOT EXISTS transaction_orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      order_id INTEGER,
       transaction_id INTEGER,
-      FOREIGN KEY (order_id) REFERENCES orders (id),
+      FOREIGN KEY (product_id) REFERENCES products (id),
       FOREIGN KEY (transaction_id) REFERENCES transactions (id)
     );
   `);

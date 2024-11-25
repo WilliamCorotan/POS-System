@@ -12,7 +12,10 @@ import EditProductScreen from './src/screens/EditProductScreen';
 import CartScreen from './src/screens/CartScreen';
 import TransactionsScreen from './src/screens/TransactionsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import { initializeDatabase, dropTables } from './src/db';
+import PaymentMethodsScreen from './src/screens/PaymentMethodsScreen';
+import AddPaymentMethodScreen from './src/screens/AddPaymentMethodScreen';
+import EditPaymentMethodScreen from './src/screens/EditPaymentMethodScreen';
+import { initializeDatabase } from './src/db';
 import { seedDatabase } from './src/db/seeders';
 
 const Tab = createBottomTabNavigator();
@@ -28,13 +31,23 @@ function ProductsStack() {
   );
 }
 
+function SettingsStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="SettingsList" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} options={{ title: 'Payment Methods' }} />
+      <Stack.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} options={{ title: 'Add Payment Method' }} />
+      <Stack.Screen name="EditPaymentMethod" component={EditPaymentMethodScreen} options={{ title: 'Edit Payment Method' }} />
+    </Stack.Navigator>
+  );
+}
+
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const setup = async () => {
       try {
-        // await dropTables();
         await initializeDatabase();
         await seedDatabase();
       } catch (error) {
@@ -56,37 +69,42 @@ export default function App() {
   }
 
   return (
-      <PaperProvider>
-        <NavigationContainer>
-          <Tab.Navigator
-            screenOptions={({ route }) => ({
-              tabBarIcon: ({ focused, color, size }) => {
-                let iconName;
+    <PaperProvider>
+      <NavigationContainer>
+        <Tab.Navigator
+          initialRouteName="Cart"
+          screenOptions={({ route }) => ({
+            tabBarIcon: ({ focused, color, size }) => {
+              let iconName;
 
-                if (route.name === 'Products') {
-                  iconName = focused ? 'grid' : 'grid-outline';
-                } else if (route.name === 'Cart') {
-                  iconName = focused ? 'cart' : 'cart-outline';
-                } else if (route.name === 'Transactions') {
-                  iconName = focused ? 'receipt' : 'receipt-outline';
-                } else if (route.name === 'Settings') {
-                  iconName = focused ? 'settings' : 'settings-outline';
-                }
+              if (route.name === 'Products') {
+                iconName = focused ? 'grid' : 'grid-outline';
+              } else if (route.name === 'Cart') {
+                iconName = focused ? 'cart' : 'cart-outline';
+              } else if (route.name === 'Transactions') {
+                iconName = focused ? 'receipt' : 'receipt-outline';
+              } else if (route.name === 'Settings') {
+                iconName = focused ? 'settings' : 'settings-outline';
+              }
 
-                return <Ionicons name={iconName} size={size} color={color} />;
-              },
-            })}
-          >
-            <Tab.Screen 
-              name="Products" 
-              component={ProductsStack} 
-              options={{ headerShown: false }}
-            />
-            <Tab.Screen name="Cart" component={CartScreen} />
-            <Tab.Screen name="Transactions" component={TransactionsScreen} />
-            <Tab.Screen name="Settings" component={SettingsScreen} />
-          </Tab.Navigator>
-        </NavigationContainer>
-      </PaperProvider>
+              return <Ionicons name={iconName} size={size} color={color} />;
+            },
+          })}
+        >
+          <Tab.Screen name="Cart" component={CartScreen} />
+          <Tab.Screen 
+            name="Products" 
+            component={ProductsStack} 
+            options={{ headerShown: false }}
+          />
+          <Tab.Screen name="Transactions" component={TransactionsScreen} />
+          <Tab.Screen 
+            name="Settings" 
+            component={SettingsStack}
+            options={{ headerShown: false }}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </PaperProvider>
   );
 }

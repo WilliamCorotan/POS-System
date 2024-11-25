@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
-import { Card, Title, Paragraph, Button, Text, Portal, Dialog, TextInput, FAB, Snackbar } from 'react-native-paper';
+import { Card, Title, Paragraph, Button, Text, Portal, Dialog, TextInput, FAB, Snackbar, RadioButton } from 'react-native-paper';
 import { BarCodeScanner } from 'expo-barcode-scanner';
-import { CartItem } from '../types';
-import { getCartItems, updateCartItemQuantity, removeCartItem, finalizeTransaction, addToCart } from '../database';
+import { CartItem, PaymentMethod } from '../types';
+import { getCartItems, updateCartItemQuantity, removeCartItem, finalizeTransaction, addToCart, getPaymentMethods } from '../database';
 
 export default function CartScreen() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -11,76 +11,86 @@ export default function CartScreen() {
   const [cashReceived, setCashReceived] = useState('');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);  // New state for pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const lastScanRef = useRef<number>(0);
+  const SCAN_DELAY = 2000;
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<number | null>(null);
 
   useEffect(() => {
     loadCartItems();
+    loadPaymentMethods();
     requestCameraPermission();
   }, []);
 
+  const loadPaymentMethods = async () => {
+    const methods = await getPaymentMethods();
+    setPaymentMethods(methods);
+    if (methods.length > 0) {
+      setSelectedPaymentMethod(methods[0].id);
+    }
+  };
+
   const requestCameraPermission = async () => {
     const { status } = await BarCodeScanner.requestPermissionsAsync();
-    console.log(status);
     setHasPermission(status === 'granted');
   };
 
-  // Function to load cart items
   const loadCartItems = async () => {
     const items = await getCartItems();
-    console.log('items',items);
     setCartItems(items);
   };
 
-  // Calculate total price of cart items
   const calculateTotal = () => {
     return cartItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
   };
 
-  // Update item quantity
   const handleUpdateQuantity = async (orderId: number, quantity: number) => {
     await updateCartItemQuantity(orderId, quantity);
     await loadCartItems();
   };
 
-  // Remove item from cart
   const handleRemoveItem = async (orderId: number) => {
     await removeCartItem(orderId);
     await loadCartItems();
   };
 
-  // Handle checkout process
   const handleCheckout = async () => {
+    if (!selectedPaymentMethod) return;
+    
     try {
-      await finalizeTransaction(1, parseFloat(cashReceived)); // Using cash payment (id: 1)
+      await finalizeTransaction(selectedPaymentMethod, parseFloat(cashReceived));
       await loadCartItems();
       setCheckoutDialogVisible(false);
       setCashReceived('');
+      setSelectedPaymentMethod(paymentMethods[0]?.id || null);
     } catch (error) {
       console.error('Checkout error:', error);
     }
   };
 
-  // Handle barcode scan
   const handleBarCodeScanned = async ({ type, data }) => {
+    const now = Date.now();
+    if (now - lastScanRef.current < SCAN_DELAY) {
+      return;
+    }
+    lastScanRef.current = now;
+
     try {
-      console.log('scanning', data);
-      // Assuming the barcode contains the product ID
-      await addToCart(parseInt(data), 1);  // Add product to cart
-      await loadCartItems();  // Optionally reload the cart after adding the item
+      await addToCart(parseInt(data), 1);
+      await loadCartItems();
     } catch (error) {
       console.error('Error scanning product:', error);
     }
     setScanning(false);
   };
 
-  // Handle pull-to-refresh
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadCartItems();  // Reload the cart items
-    setRefreshing(false);    // End refreshing
+    await loadCartItems();
+    setRefreshing(false);
   };
 
-  // Render cart item
   const renderCartItem = ({ item }: { item: CartItem }) => (
     <Card style={styles.card}>
       <Card.Content>
@@ -108,7 +118,7 @@ export default function CartScreen() {
     return (
       <View style={styles.container}>
         <BarCodeScanner
-          onBarCodeScanned={handleBarCodeScanned}
+          onBarCodeScanned={scanning ? handleBarCodeScanned : undefined}
           style={StyleSheet.absoluteFillObject}
         />
         <Button 
@@ -142,11 +152,11 @@ export default function CartScreen() {
         )}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}    // The state that controls the spinner
-            onRefresh={handleRefresh}   // Function to call when the user pulls to refresh
-            tintColor="#007bff"         // Color of the refresh spinner
-            title="Refreshing..."       // Title displayed during refresh
-            titleColor="#007bff"        // Title color
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#007bff"
+            title="Refreshing..."
+            titleColor="#007bff"
           />
         }
       />
@@ -156,10 +166,9 @@ export default function CartScreen() {
         style={styles.fab}
         onPress={() => {
           if (hasPermission) {
-            console.log('has');
+            lastScanRef.current = 0;
             setScanning(true);
           } else {
-            console.log('no');
             requestCameraPermission();
           }
         }}
@@ -170,6 +179,21 @@ export default function CartScreen() {
           <Dialog.Title>Checkout</Dialog.Title>
           <Dialog.Content>
             <Text>Total Amount: PHP {calculateTotal().toFixed(2)}</Text>
+            
+            <Text style={styles.label}>Payment Method:</Text>
+            <RadioButton.Group
+              onValueChange={value => setSelectedPaymentMethod(parseInt(value))}
+              value={selectedPaymentMethod?.toString() || ''}
+            >
+              {paymentMethods.map(method => (
+                <RadioButton.Item
+                  key={method.id}
+                  label={method.name}
+                  value={method.id.toString()}
+                />
+              ))}
+            </RadioButton.Group>
+
             <TextInput
               label="Cash Received"
               value={cashReceived}
@@ -185,7 +209,7 @@ export default function CartScreen() {
             <Button onPress={() => setCheckoutDialogVisible(false)}>Cancel</Button>
             <Button 
               onPress={handleCheckout}
-              disabled={parseFloat(cashReceived) < calculateTotal()}
+              disabled={!selectedPaymentMethod || parseFloat(cashReceived) < calculateTotal()}
             >
               Complete Transaction
             </Button>
@@ -216,6 +240,11 @@ const styles = StyleSheet.create({
   },
   input: {
     marginVertical: 8,
+  },
+  label: {
+    fontSize: 16,
+    marginTop: 16,
+    marginBottom: 8,
   },
   fab: {
     position: 'absolute',

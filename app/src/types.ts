@@ -28,6 +28,11 @@ export interface Transaction {
   total_price: number;
 }
 
+export interface PaymentMethod {
+  id: number;
+  name: string;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -39,4 +44,7 @@ export type RootStackParamList = {
   ProductsList: undefined;
   AddProduct: undefined;
   EditProduct: { product: Product };
+  PaymentMethods: undefined;
+  AddPaymentMethod: undefined;
+  EditPaymentMethod: { paymentMethod: PaymentMethod };
 };

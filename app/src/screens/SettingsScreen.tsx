@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { List, Switch } from 'react-native-paper';
+import { List, Switch, Button } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 
 export default function SettingsScreen() {
   const [darkMode, setDarkMode] = React.useState(false);
+  const navigation = useNavigation();
 
   return (
     <View style={styles.container}>
@@ -29,8 +31,8 @@ export default function SettingsScreen() {
         <List.Subheader>Business</List.Subheader>
         <List.Item
           title="Payment Methods"
-          description="Manage accepted payment methods"
-          onPress={() => {}}
+          description="Manage payment methods"
+          onPress={() => navigation.navigate('PaymentMethods')}
         />
         <List.Item
           title="Categories"

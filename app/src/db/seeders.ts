@@ -7,13 +7,13 @@ export const seedDatabase = () => {
     db.transaction(
       tx => {
         // Seed payment methods
-        tx.executeSql(`
-          INSERT OR IGNORE INTO payments (name) VALUES 
-          ('Cash'),
-          ('Credit Card'),
-          ('Debit Card'),
-          ('Mobile Payment');
-        `);
+        // tx.executeSql(`
+        //   INSERT OR IGNORE INTO payments (name) VALUES 
+        //   ('Cash'),
+        //   ('Credit Card'),
+        //   ('Debit Card'),
+        //   ('Mobile Payment');
+        // `);
 
         // Seed unit measurements
         // tx.executeSql(`
