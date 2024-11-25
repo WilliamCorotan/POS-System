@@ -12,7 +12,7 @@ import EditProductScreen from './src/screens/EditProductScreen';
 import CartScreen from './src/screens/CartScreen';
 import TransactionsScreen from './src/screens/TransactionsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import { initializeDatabase } from './src/db';
+import { initializeDatabase, dropTables } from './src/db';
 import { seedDatabase } from './src/db/seeders';
 
 const Tab = createBottomTabNavigator();
@@ -34,6 +34,7 @@ export default function App() {
   useEffect(() => {
     const setup = async () => {
       try {
+        // await dropTables();
         await initializeDatabase();
         await seedDatabase();
       } catch (error) {

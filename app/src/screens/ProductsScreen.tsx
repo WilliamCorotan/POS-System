@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { Searchbar, Card, Title, Paragraph, Button, FAB } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { Product } from '../types';
@@ -9,6 +9,7 @@ export default function ProductsScreen() {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
+  const [refreshing, setRefreshing] = useState(false);  // Add state for pull-to-refresh
 
   useEffect(() => {
     loadProducts();
@@ -16,6 +17,7 @@ export default function ProductsScreen() {
 
   const loadProducts = async () => {
     const productsData = await getProducts();
+    console.log('productsData', productsData);
     setProducts(productsData);
   };
 
@@ -29,13 +31,15 @@ export default function ProductsScreen() {
     product.code.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const reloadProductList = async () => {
-    const productsData = await getProducts();
-    setProducts(productsData);
+  // Function to reload products list on pull-to-refresh
+  const handleRefresh = async () => {
+    setRefreshing(true);  // Set refreshing to true to show the spinner
+    await loadProducts(); // Reload the product list
+    setRefreshing(false); // Set refreshing to false once data is loaded
   };
 
   const renderProduct = ({ item }: { item: Product }) => (
-    <Card  style={styles.card}>
+    <Card style={styles.card}>
       <Card.Content>
         <Title>{item.name}</Title>
         <Paragraph>Code: {item.code}</Paragraph>
@@ -64,11 +68,21 @@ export default function ProductsScreen() {
         keyExtractor={item => item.id.toString()}
         numColumns={2}
         contentContainerStyle={styles.productList}
+        // Adding RefreshControl for pull-to-refresh functionality
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing} // Spinner state
+            onRefresh={handleRefresh} // Function to call when pull-to-refresh is triggered
+            tintColor="#007bff" // Spinner color
+            title="Refreshing..." // Title displayed during refresh
+            titleColor="#007bff" // Title color
+          />
+        }
       />
       <FAB
         icon="plus"
         style={styles.fab}
-        onPress={() => navigation.navigate('AddProduct', { onProductAdded: reloadProductList })}
+        onPress={() => navigation.navigate('AddProduct', { onProductAdded: loadProducts })}
       />
     </View>
   );

@@ -111,11 +111,12 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      payment_method_id INTEGER,
-      date_of_transaction TEXT NOT NULL,
+      payment_method_id INTEGER NULL,
+      date_of_transaction DATETIME,
       email_to TEXT,
-      cash_received REAL NOT NULL,
-      total_price REAL NOT NULL,
+      cash_received REAL NULL,
+      total_price REAL NULL,
+      status TEXT NOT NULL DEFAULT 'active',
       FOREIGN KEY (payment_method_id) REFERENCES payments (id)
     );
   `);

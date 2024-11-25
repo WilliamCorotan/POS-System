@@ -16,23 +16,25 @@ export const seedDatabase = () => {
         `);
 
         // Seed unit measurements
-        tx.executeSql(`
-          INSERT OR IGNORE INTO unit_measurements (name, description) VALUES 
-          ('piece', 'Individual unit'),
-          ('kg', 'Kilogram'),
-          ('g', 'Gram'),
-          ('l', 'Liter'),
-          ('ml', 'Milliliter');
-        `);
+        // tx.executeSql(`
+        //   INSERT INTO unit_measurements (name, description) VALUES 
+        //   ('piece', 'Individual unit'),
+        //   ('kg', 'Kilogram'),
+        //   ('g', 'Gram'),
+        //   ('l', 'Liter'),
+        //   ('ml', 'Milliliter')
+        //   ON CONFLICT(name) DO NOTHING;
+        // `);
 
-        // Seed product categories
-        tx.executeSql(`
-          INSERT OR IGNORE INTO product_categories (name, description) VALUES 
-          ('Electronics', 'Electronic devices and accessories'),
-          ('Food', 'Food and beverages'),
-          ('Clothing', 'Apparel and accessories'),
-          ('Home', 'Home and living items');
-        `);
+        // // Seed product categories
+        // tx.executeSql(`
+        //   INSERT OR IGNORE INTO product_categories (name, description) VALUES 
+        //   ('Electronics', 'Electronic devices and accessories'),
+        //   ('Food', 'Food and beverages'),
+        //   ('Clothing', 'Apparel and accessories'),
+        //   ('Home', 'Home and living items')
+        //   ON CONFLICT(name) DO NOTHING;
+        // `);
       },
       error => {
         console.error('Error seeding database:', error);

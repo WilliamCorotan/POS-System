@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import { Product } from '../types';
 
 type ProductFormProps = {
   initialValues?: Partial<Product>;
+  setInitialValues: (product: Partial<Product>) => void;
   onSubmit: (product: Partial<Product>) => void;
   onCancel: () => void;
+  onScanBarcode: () => void;
 };
 
-export default function ProductForm({ initialValues, onSubmit, onCancel }: ProductFormProps) {
+export default function ProductForm({ initialValues, setInitialValues, onSubmit, onCancel, onScanBarcode }: ProductFormProps) {
   const [product, setProduct] = useState<Partial<Product>>({
     name: '',
     code: '',
@@ -21,22 +23,37 @@ export default function ProductForm({ initialValues, onSubmit, onCancel }: Produ
     ...initialValues,
   });
 
+  useEffect(() => {
+    if (initialValues) {
+      setProduct(prev => ({ ...prev, ...initialValues }));
+    }
+  }, [initialValues]);
+
   const handleSubmit = () => {
     onSubmit(product);
   };
 
   return (
     <View style={styles.container}>
+      <View style={styles.barcodeContainer}>
+        <TextInput
+            label="Code"
+            value={product.code}
+            onChangeText={(text) => setProduct({ ...product, code: text })}
+            style={styles.barcodeInput}
+        />
+        <Button 
+          mode="contained" 
+          onPress={onScanBarcode}
+          style={styles.scanButton}
+        >
+          Scan
+        </Button>
+      </View>
       <TextInput
         label="Name"
         value={product.name}
         onChangeText={(text) => setProduct({ ...product, name: text })}
-        style={styles.input}
-      />
-      <TextInput
-        label="Code"
-        value={product.code}
-        onChangeText={(text) => setProduct({ ...product, code: text })}
         style={styles.input}
       />
       <TextInput
@@ -92,6 +109,19 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
+  },
+  barcodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  barcodeInput: {
+    flex: 1,
+    marginBottom: 0,
+    marginRight: 8,
+  },
+  scanButton: {
+    marginLeft: 8,
   },
   buttonContainer: {
     flexDirection: 'row',

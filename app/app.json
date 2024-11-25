@@ -17,11 +17,20 @@
     "ios": {
       "supportsTablet": true
     },
+    "plugins": [
+      [
+        "expo-barcode-scanner",
+        {
+            "cameraPermission": "Allow $(PRODUCT_NAME) to access camera."
+        }
+      ]
+    ],
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": ["CAMERA"],
       "package": "com.williamcorotan.posapp"
     },
     "extra": {
