@@ -1,232 +1,36 @@
-# POS System Server Setup
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-This guide will walk you through the process of setting up the server for the POS (Point of Sale) system.
+## Getting Started
 
-## Prerequisites
+First, run the development server:
 
-- Node.js (v14 or later)
-- MySQL (v8 or later)
-- npm (usually comes with Node.js)
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-## Step 1: Database Setup
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-1. Log in to MySQL as root:
-   ```
-   mysql -u root -p
-   ```
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-2. Create a new database for the POS system:
-   ```sql
-   CREATE DATABASE pos_system;
-   ```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-3. Create a new user and grant privileges:
-   ```sql
-   CREATE USER 'pos_user'@'localhost' IDENTIFIED BY 'your_password_here';
-   GRANT ALL PRIVILEGES ON pos_system.* TO 'pos_user'@'localhost';
-   FLUSH PRIVILEGES;
-   ```
+## Learn More
 
-4. Switch to the new database:
-   ```sql
-   USE pos_system;
-   ```
+To learn more about Next.js, take a look at the following resources:
 
-5. Create the necessary tables:
-   ```sql
-   CREATE TABLE users (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     name VARCHAR(255) NOT NULL,
-     email VARCHAR(255) NOT NULL UNIQUE,
-     password VARCHAR(255) NOT NULL,
-     token VARCHAR(255),
-     profile_picture VARCHAR(255)
-   );
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-   CREATE TABLE user_contacts (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     user_id INT,
-     contact_id INT,
-     contact_type VARCHAR(50),
-     FOREIGN KEY (user_id) REFERENCES users(id)
-   );
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-   CREATE TABLE user_settings (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     user_id INT,
-     settings_name VARCHAR(255),
-     FOREIGN KEY (user_id) REFERENCES users(id)
-   );
+## Deploy on Vercel
 
-   CREATE TABLE files (
-     id VARCHAR(255) PRIMARY KEY,
-     filename VARCHAR(255) NOT NULL,
-     filepath VARCHAR(255) NOT NULL,
-     mimetype VARCHAR(100) NOT NULL
-   );
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-   CREATE TABLE product_categories (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     name VARCHAR(255) NOT NULL,
-     description TEXT
-   );
-
-   CREATE TABLE unit_measurements (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     name VARCHAR(50) NOT NULL,
-     description TEXT
-   );
-
-   CREATE TABLE products (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     name VARCHAR(255) NOT NULL,
-     code VARCHAR(50) UNIQUE,
-     description TEXT,
-     image VARCHAR(255),
-     buy_price DECIMAL(10, 2) NOT NULL,
-     sell_price DECIMAL(10, 2) NOT NULL,
-     stock INT NOT NULL,
-     low_stock_level INT,
-     expiration_date DATE,
-     unit_measurements_id INT,
-     category_id INT,
-     FOREIGN KEY (unit_measurements_id) REFERENCES unit_measurements(id),
-     FOREIGN KEY (category_id) REFERENCES product_categories(id),
-     FOREIGN KEY (image) REFERENCES files(id)
-   );
-
-   CREATE TABLE orders (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     product_id INT,
-     quantity INT NOT NULL,
-     FOREIGN KEY (product_id) REFERENCES products(id)
-   );
-
-   CREATE TABLE payments (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     name VARCHAR(50) NOT NULL
-   );
-
-   CREATE TABLE transactions (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     payment_method_id INT,
-     date_of_transaction TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-     email_to VARCHAR(255),
-     cash_received DECIMAL(10, 2),
-     total_price DECIMAL(10, 2) NOT NULL,
-     FOREIGN KEY (payment_method_id) REFERENCES payments(id)
-   );
-
-   CREATE TABLE transaction_orders (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     order_id INT,
-     transaction_id INT,
-     FOREIGN KEY (order_id) REFERENCES orders(id),
-     FOREIGN KEY (transaction_id) REFERENCES transactions(id)
-   );
-   ```
-
-6. Exit MySQL:
-   ```
-   EXIT;
-   ```
-
-## Step 2: Project Setup
-
-1. Create a new directory for your project:
-   ```
-   mkdir pos-system-server
-   cd pos-system-server
-   ```
-
-2. Initialize a new Node.js project:
-   ```
-   npm init -y
-   ```
-
-3. Install the required dependencies:
-   ```
-   npm install hono @hono/node-server mysql2 dotenv jsonwebtoken
-   ```
-
-4. Create a `.env` file in the root directory and add the following content:
-   ```
-   DB_HOST=localhost
-   DB_USER=pos_user
-   DB_PASSWORD=your_password_here
-   DB_NAME=pos_system
-   JWT_SECRET=your_jwt_secret_here
-   ```
-
-   Replace `your_password_here` with the password you set for the `pos_user` and `your_jwt_secret_here` with a secure random string for JWT token generation.
-
-## Step 3: Server Code
-
-1. Create a new file named `server.ts` in the root directory and copy the provided server code into it.
-
-2. Update the database connection details in the server code to use the environment variables:
-
-   ```typescript
-   import { config } from 'dotenv';
-   config();
-
-   const db = await new Client({
-     host: process.env.DB_HOST,
-     user: process.env.DB_USER,
-     password: process.env.DB_PASSWORD,
-     database: process.env.DB_NAME,
-   });
-   ```
-
-3. Update the JWT secret in the server code:
-
-   ```typescript
-   app.use('/*', jwt({
-     secret: process.env.JWT_SECRET,
-   }))
-   ```
-
-## Step 4: Running the Server
-
-1. Add a start script to your `package.json`:
-   ```json
-   "scripts": {
-     "start": "node --loader ts-node/esm server.ts"
-   }
-   ```
-
-2. Install ts-node and typescript as dev dependencies:
-   ```
-   npm install --save-dev ts-node typescript @types/node
-   ```
-
-3. Create a `tsconfig.json` file in the root directory with the following content:
-   ```json
-   {
-     "compilerOptions": {
-       "target": "ES2020",
-       "module": "ESNext",
-       "moduleResolution": "node",
-       "esModuleInterop": true,
-       "strict": true
-     }
-   }
-   ```
-
-4. Start the server:
-   ```
-   npm start
-   ```
-
-Your server should now be running on `http://localhost:3000`.
-
-## Next Steps
-
-- Implement user authentication and authorization
-- Add more API endpoints as needed
-- Implement proper error handling and logging
-- Set up a production-ready environment (e.g., using PM2 for process management)
-- Configure HTTPS for secure communication
-- Implement rate limiting and other security measures
-
-Remember to keep your `.env` file and sensitive information secure and never commit them to version control.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
