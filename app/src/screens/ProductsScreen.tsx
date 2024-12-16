@@ -1,29 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
-import { Searchbar, Card, Title, Paragraph, Button, FAB } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { Searchbar, Card, Title, Paragraph } from 'react-native-paper';
 import { Product } from '../types';
-import { getProducts, deleteProduct } from '../database';
+import { fetchProducts } from '../api/products';
+import { useUser } from '../contexts/UserContext';
 
 export default function ProductsScreen() {
-  const navigation = useNavigation();
+  const { userId } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
-  const [refreshing, setRefreshing] = useState(false);  // Add state for pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadProducts();
   }, []);
 
   const loadProducts = async () => {
-    const productsData = await getProducts();
-    console.log('productsData', productsData);
-    setProducts(productsData);
-  };
-
-  const handleDeleteProduct = async (id: number) => {
-    await deleteProduct(id);
-    await loadProducts();
+    try {
+      const productsData = await fetchProducts(userId);
+      setProducts(productsData);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
   };
 
   const filteredProducts = products.filter(product =>
@@ -31,11 +29,10 @@ export default function ProductsScreen() {
     product.code.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Function to reload products list on pull-to-refresh
   const handleRefresh = async () => {
-    setRefreshing(true);  // Set refreshing to true to show the spinner
-    await loadProducts(); // Reload the product list
-    setRefreshing(false); // Set refreshing to false once data is loaded
+    setRefreshing(true);
+    await loadProducts();
+    setRefreshing(false);
   };
 
   const renderProduct = ({ item }: { item: Product }) => (
@@ -43,14 +40,9 @@ export default function ProductsScreen() {
       <Card.Content>
         <Title>{item.name}</Title>
         <Paragraph>Code: {item.code}</Paragraph>
-        <Paragraph>Price: PHP{item.sell_price}</Paragraph>
+        <Paragraph>Price: PHP{item.sellPrice}</Paragraph>
         <Paragraph>Stock: {item.stock}</Paragraph>
       </Card.Content>
-      <Card.Actions>
-        <Button onPress={() => navigation.navigate('EditProduct', { product: item })}>
-          Edit
-        </Button>
-      </Card.Actions>
     </Card>
   );
 
@@ -68,21 +60,15 @@ export default function ProductsScreen() {
         keyExtractor={item => item.id.toString()}
         numColumns={2}
         contentContainerStyle={styles.productList}
-        // Adding RefreshControl for pull-to-refresh functionality
         refreshControl={
           <RefreshControl
-            refreshing={refreshing} // Spinner state
-            onRefresh={handleRefresh} // Function to call when pull-to-refresh is triggered
-            tintColor="#007bff" // Spinner color
-            title="Refreshing..." // Title displayed during refresh
-            titleColor="#007bff" // Title color
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#007bff"
+            title="Refreshing..."
+            titleColor="#007bff"
           />
         }
-      />
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={() => navigation.navigate('AddProduct', { onProductAdded: loadProducts })}
       />
     </View>
   );
@@ -102,11 +88,5 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     margin: 8,
-  },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
-  },
+  }
 });
