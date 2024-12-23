@@ -4,7 +4,6 @@ import { Card, Title, Paragraph, Button, Text, Portal, Dialog, TextInput, FAB, S
 import { BarCodeScanner } from 'expo-barcode-scanner';
 import { CartItem, PaymentMethod } from '../types';
 import { getCartItems, updateCartItemQuantity, removeCartItem, finalizeTransaction, addToCart, getPaymentMethods } from '../database';
-import { createTransaction } from '../api';
 
 export default function CartScreen() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -60,22 +59,7 @@ export default function CartScreen() {
     if (!selectedPaymentMethod) return;
     
     try {
-      // First finalize the local transaction
       await finalizeTransaction(selectedPaymentMethod, parseFloat(cashReceived));
-      
-      // Then sync with server
-      const transactionData = {
-        paymentMethodId: selectedPaymentMethod,
-        cashReceived: parseFloat(cashReceived),
-        items: cartItems.map(item => ({
-          productId: item.product_id,
-          quantity: item.quantity,
-          price: item.price
-        }))
-      };
-      
-      await createTransaction(transactionData);
-      
       await loadCartItems();
       setCheckoutDialogVisible(false);
       setCashReceived('');
@@ -84,6 +68,7 @@ export default function CartScreen() {
       console.error('Checkout error:', error);
     }
   };
+
   const handleBarCodeScanned = async ({ type, data }) => {
     const now = Date.now();
     if (now - lastScanRef.current < SCAN_DELAY) {
