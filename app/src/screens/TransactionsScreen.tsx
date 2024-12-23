@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { Card, Title, Paragraph } from 'react-native-paper';
 import { Transaction } from '../types';
-import { getTransactions } from '../database';
+import { fetchTransactions } from '../api';
 
 export default function TransactionsScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -13,8 +13,12 @@ export default function TransactionsScreen() {
   }, []);
 
   const loadTransactions = async () => {
-    const transactionsData = await getTransactions();
-    setTransactions(transactionsData);
+    try {
+      const transactionsData = await fetchTransactions();
+      setTransactions(transactionsData);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+    }
   };
 
   const handleRefresh = async () => {
@@ -27,9 +31,9 @@ export default function TransactionsScreen() {
     <Card style={styles.card}>
       <Card.Content>
         <Title>Transaction #{item.id}</Title>
-        <Paragraph>Date: {new Date(item.date_of_transaction).toLocaleDateString()}</Paragraph>
-        <Paragraph>Total: PHP{item.total_price}</Paragraph>
-        {/* <Paragraph>Payment Method: {item.payment_method}</Paragraph> */}
+        <Paragraph>Date: {new Date(item.dateOfTransaction).toLocaleDateString()}</Paragraph>
+        <Paragraph>Total: PHP{item.totalPrice}</Paragraph>
+        <Paragraph>Status: {item.status}</Paragraph>
       </Card.Content>
     </Card>
   );
