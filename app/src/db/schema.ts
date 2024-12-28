@@ -5,6 +5,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
@@ -17,6 +18,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS user_contacts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       user_id INTEGER,
       contact_id INTEGER,
       FOREIGN KEY (user_id) REFERENCES users (id)
@@ -27,6 +29,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS contact_types (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       name TEXT NOT NULL
     );
   `);
@@ -35,6 +38,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS user_settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       user_id INTEGER,
       settings_id INTEGER,
       FOREIGN KEY (user_id) REFERENCES users (id),
@@ -46,6 +50,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       name TEXT NOT NULL
     );
   `);
@@ -54,6 +59,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       name TEXT NOT NULL,
       code TEXT UNIQUE NOT NULL,
       description TEXT,
@@ -72,6 +78,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS product_categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       name TEXT NOT NULL,
       description TEXT
     );
@@ -81,6 +88,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS unit_measurements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       name TEXT NOT NULL,
       description TEXT
     );
@@ -90,6 +98,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       product_id INTEGER,
       quantity INTEGER NOT NULL,
       transaction_id INTEGER,
@@ -102,6 +111,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       payment_method_id INTEGER NULL,
       date_of_transaction DATETIME,
       email_to TEXT,
@@ -116,6 +126,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS transactions_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       user_id INTEGER,
       transaction_id INTEGER,
       FOREIGN KEY (user_id) REFERENCES users (id),
@@ -127,6 +138,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS payments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_id TEXT NOT NULL,
       name TEXT NOT NULL
     );
   `);
@@ -135,6 +147,7 @@ export const createTables = (tx: SQLTransaction) => {
   tx.executeSql(`
     CREATE TABLE IF NOT EXISTS files (
       id TEXT PRIMARY KEY,
+      clerk_id TEXT NOT NULL,
       filename TEXT NOT NULL,
       filepath TEXT NOT NULL,
       mimetype TEXT NOT NULL

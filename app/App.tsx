@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, View } from 'react-native';
 
 import { UserProvider, useUser } from './src/contexts/UserContext';
-import UserIdScreen from './src/screens/UserIdScreen';
+import ScanClerkScreen from './src/screens/ScanClerkScreen';
 import ProductsScreen from './src/screens/ProductsScreen';
 import CartScreen from './src/screens/CartScreen';
 import TransactionsScreen from './src/screens/TransactionsScreen';
@@ -42,7 +42,7 @@ function MainApp() {
   }
 
   if (!userId) {
-    return <UserIdScreen />;
+    return <ScanClerkScreen />;
   }
 
   return (
