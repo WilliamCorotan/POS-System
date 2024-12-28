@@ -2,14 +2,17 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, DollarSign, TrendingUp } from "lucide-react";
+import { Package, DollarSign, TrendingUp, QrCode } from "lucide-react";
 import { AreaChart, BarChart } from "@tremor/react";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
     const { userId } = useAuth();
     const { transactions } = useTransactions();
+    const router = useRouter();
 
     // Calculate monthly data for the area chart
     const monthlyData = useMemo(() => {
@@ -94,7 +97,13 @@ export default function DashboardPage() {
 
     return (
         <div className="container mx-auto p-6 space-y-6">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold">Dashboard</h1>
+                <Button onClick={() => router.push('/qr')} className="flex items-center gap-2">
+                    <QrCode className="h-4 w-4" />
+                    Show QR Code
+                </Button>
+            </div>
 
             {/* Summary Cards */}
             <div className="grid gap-4 md:grid-cols-3">
