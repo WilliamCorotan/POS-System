@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { Card, Title, Paragraph } from 'react-native-paper';
 import { Transaction } from '../types';
-import { fetchTransactions } from '../api';
+import { fetchTransactions } from '../api/transactions';
+import { useUser } from '../contexts/UserContext';
 
 export default function TransactionsScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const { userId } = useUser();
 
   useEffect(() => {
     loadTransactions();
@@ -14,7 +16,7 @@ export default function TransactionsScreen() {
 
   const loadTransactions = async () => {
     try {
-      const transactionsData = await fetchTransactions();
+      const transactionsData = await fetchTransactions(userId);
       setTransactions(transactionsData);
     } catch (error) {
       console.error('Error loading transactions:', error);
