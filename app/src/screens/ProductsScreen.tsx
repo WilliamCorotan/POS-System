@@ -4,11 +4,12 @@ import { Searchbar, Card, Title, Paragraph } from 'react-native-paper';
 import { Product } from '../types';
 import { fetchProducts } from '../api/products';
 import { useUser } from '../contexts/UserContext';
+import { useProducts } from '../hooks/useProducts';
 
 export default function ProductsScreen() {
   const { userId } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
-  const [products, setProducts] = useState<Product[]>([]);
+  const { products , setProducts } = useProducts();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -17,6 +18,9 @@ export default function ProductsScreen() {
 
   const loadProducts = async () => {
     try {
+        if(userId === null) {
+            throw new Error('No User ID.');
+        }
       const productsData = await fetchProducts(userId);
       setProducts(productsData);
     } catch (error) {
@@ -40,7 +44,7 @@ export default function ProductsScreen() {
       <Card.Content>
         <Title>{item.name}</Title>
         <Paragraph>Code: {item.code}</Paragraph>
-        <Paragraph>Price: PHP{item.sellPrice}</Paragraph>
+        <Paragraph>Price: PHP{item.sell_price}</Paragraph>
         <Paragraph>Stock: {item.stock}</Paragraph>
       </Card.Content>
     </Card>

@@ -19,6 +19,7 @@ export default function ScanClerkScreen() {
   const handleBarCodeScanned = ({ data } : any) => {
     setScanning(false);
     setUserId(data);
+    
   };
 
   if (hasPermission === null) {

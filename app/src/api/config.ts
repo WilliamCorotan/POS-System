@@ -1,4 +1,4 @@
-export const API_URL = 'http://localhost:3000/api';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export const createHeaders = (userId: string) => ({
   'Content-Type': 'application/json',

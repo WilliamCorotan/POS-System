@@ -21,6 +21,7 @@ export const createTransaction = async (userId: string, transactionData: any): P
       headers: createHeaders(userId),
       body: JSON.stringify(transactionData),
     });
+    console.log('check >>', response);
     if (!response.ok) throw new Error('Failed to create transaction');
     return await response.json();
   } catch (error) {

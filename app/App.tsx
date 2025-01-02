@@ -11,35 +11,12 @@ import ProductsScreen from './src/screens/ProductsScreen';
 import CartScreen from './src/screens/CartScreen';
 import TransactionsScreen from './src/screens/TransactionsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import { initializeDatabase } from './src/db';
+import { StoreProvider } from './src/contexts/StoreContext';
 
 const Tab = createBottomTabNavigator();
 
 function MainApp() {
   const { userId } = useUser();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const setup = async () => {
-      try {
-        await initializeDatabase();
-      } catch (error) {
-        console.error('Database setup error:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    setup();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
 
   if (!userId) {
     return <ScanClerkScreen />;
@@ -78,9 +55,11 @@ export default function App() {
   return (
     <PaperProvider>
       <UserProvider>
-        <NavigationContainer>
-          <MainApp />
-        </NavigationContainer>
+        <StoreProvider>
+            <NavigationContainer>
+                <MainApp />
+            </NavigationContainer>
+        </StoreProvider>
       </UserProvider>
     </PaperProvider>
   );
