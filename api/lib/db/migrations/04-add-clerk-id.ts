@@ -3,90 +3,49 @@ import { db } from "@/lib/db";
 
 export async function addClerkId() {
     try {
-        // Add clerk_id to files table
-        await db.run(sql`
-            ALTER TABLE files
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
+        const tables = [
+            "files",
+            "payments",
+            "users",
+            "contacts_types",
+            "user_contacts",
+            "settings",
+            "user_settings",
+            "unit_measurements",
+            "product_categories",
+            "products",
+            "transactions",
+            "orders",
+            "transactions_history",
+        ];
 
-        // Add clerk_id to payments table
-        await db.run(sql`
-            ALTER TABLE payments
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
+        for (const table of tables) {
+            // Check if the column already exists
+            const columnExists = await db.get(sql`
+                SELECT COUNT(*) as count
+                FROM pragma_table_info(${table})
+                WHERE name = 'clerk_id';
+            `);
 
-        // Add clerk_id to users table
-        await db.run(sql`
-            ALTER TABLE users
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
+            if (columnExists.count === 0) {
+                // Add the column if it doesn't exist
+                await db.run(sql`
+                    ALTER TABLE ${table}
+                    ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
+                `);
 
-        // Add unique constraint to users.clerk_id
-        await db.run(sql`
-            CREATE UNIQUE INDEX idx_users_clerk_id ON users(clerk_id);
-        `);
+                // Add unique constraint to users table specifically
+                if (table === "users") {
+                    await db.run(sql`
+                        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_clerk_id ON users(clerk_id);
+                    `);
+                }
 
-        // Add clerk_id to contacts_types table
-        await db.run(sql`
-            ALTER TABLE contacts_types
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        // Add clerk_id to user_contacts table
-        await db.run(sql`
-            ALTER TABLE user_contacts
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        // Add clerk_id to settings table
-        await db.run(sql`
-            ALTER TABLE settings
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        // Add clerk_id to user_settings table
-        await db.run(sql`
-            ALTER TABLE user_settings
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        // Add clerk_id to unit_measurements table
-        await db.run(sql`
-            ALTER TABLE unit_measurements
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        // Add clerk_id to product_categories table
-        await db.run(sql`
-            ALTER TABLE product_categories
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        // Add clerk_id to products table
-        await db.run(sql`
-            ALTER TABLE products
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        // Add clerk_id to transactions table
-        await db.run(sql`
-            ALTER TABLE transactions
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        // Add clerk_id to orders table
-        await db.run(sql`
-            ALTER TABLE orders
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        // Add clerk_id to transactions_history table
-        await db.run(sql`
-            ALTER TABLE transactions_history
-            ADD COLUMN clerk_id TEXT NOT NULL DEFAULT '';
-        `);
-
-        console.log("✓ Added clerk_id to all tables");
+                console.log(`✓ Added clerk_id to ${table}`);
+            } else {
+                console.log(`✗ clerk_id already exists in ${table}`);
+            }
+        }
     } catch (error) {
         console.error("Failed to add clerk_id columns:", error);
         throw error;

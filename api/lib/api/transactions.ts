@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { transactions, orders } from "@/lib/db/schema";
+import { transactions, orders, payments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function getTransactions(userId: string) {
@@ -22,10 +22,14 @@ export async function createTransaction(
 
         const insertData = {
             ...data,
-            date_of_transaction: dateOfTransaction,
+            paymentMethodId: parseInt(data.payment_method_id),
+            dateOfTransaction: dateOfTransaction,
+            emailTo: data.email_to ?? null,
+            totalPrice: parseFloat(data.total_price),
+            cashReceived: parseFloat(data.cash_received),
             clerkId: userId,
         };
-        console.log('inner >>', transactions);
+
         const newTransaction = await db.insert(transactions).values(insertData);
 
         // Insert transaction items
