@@ -14,6 +14,7 @@ import {
 import { UnitMeasurementForm } from "@/components/settings/UnitMeasurementForm";
 import { PaymentMethodForm } from "@/components/settings/PaymentMethodForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePaymentMethods } from "@/hooks/use-payments";
 
 export default function SettingsPage() {
     const { userId } = useAuth();
@@ -22,11 +23,12 @@ export default function SettingsPage() {
         useState(false);
     const [openPaymentMethodDialog, setOpenPaymentMethodDialog] =
         useState(false);
-
+    const {paymentMethods, createPaymentMethod, loading, error, refreshPaymentMethods} = usePaymentMethods();
     if (!userId) {
         return <div>Please sign in to view settings</div>;
     }
 
+    console.log('this >>', paymentMethods);
     return (
         <div className="container mx-auto p-6 space-y-6">
             <h1 className="text-2xl font-bold">Settings</h1>
@@ -90,7 +92,11 @@ export default function SettingsPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {/* Payment methods will be mapped here */}
+                                {paymentMethods.map((paymentMethod) => (
+                                    <TableRow key={paymentMethod.id}>
+                                        <TableCell>{paymentMethod.name}</TableCell>
+                                    </TableRow>
+                                ))}
                             </TableBody>
                         </Table>
                     </div>

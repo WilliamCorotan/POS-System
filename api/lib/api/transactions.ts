@@ -14,20 +14,33 @@ export async function createTransaction(
     items: any[],
     userId: string
 ) {
-    const newTransaction = await db.insert(transactions).values({
-        ...data,
-        clerkId: userId,
-        date: new Date().toISOString(),
-    });
 
-    // Insert transaction items
-    for (const item of items) {
-        await db.insert(orders).values({
-            transactionId: newTransaction.lastInsertRowid,
+    try {
+        
+        const date = new Date(data.date_of_transaction);
+        const dateOfTransaction = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+
+        const insertData = {
+            ...data,
+            date_of_transaction: dateOfTransaction,
             clerkId: userId,
-            ...item,
-        });
+        };
+        console.log('inner >>', transactions);
+        const newTransaction = await db.insert(transactions).values(insertData);
+
+        // Insert transaction items
+        for (const item of items) {
+            await db.insert(orders).values({
+                transactionId: newTransaction.lastInsertRowid,
+                clerkId: userId,
+                ...item,
+            });
+        }
+
+        return newTransaction;
+    } catch (error) {
+        console.error('Error creating transaction:', error);
+        throw error;
     }
 
-    return newTransaction;
 }

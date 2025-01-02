@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentUserId } from "@/lib/api/base";
 import { getPaymentMethods, createPaymentMethod } from "@/lib/api/settings";
 
+
 export async function GET() {
-    const { userId } = auth();
+    const userId = await getCurrentUserId();
     if (!userId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -20,7 +21,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-    const { userId } = auth();
+    const userId = await getCurrentUserId();
     if (!userId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
