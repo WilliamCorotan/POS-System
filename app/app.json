@@ -1,43 +1,51 @@
 {
-  "expo": {
-    "name": "POS App",
-    "slug": "pos-app",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true
-    },
-    "plugins": [
-      [
-        "expo-barcode-scanner",
-        {
-            "cameraPermission": "Allow $(PRODUCT_NAME) to access camera."
+    "expo": {
+        "name": "MPOS App",
+        "slug": "pos-app",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/images/logo.png",
+        "userInterfaceStyle": "light",
+        "splash": {
+            "image": "./assets/images/splash-logo.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#ffffff"
+        },
+        "assetBundlePatterns": ["**/*"],
+        "ios": {
+            "supportsTablet": true,
+            "infoPlist": {
+                "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access camera.",
+                "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone"
+            }
+        },
+        "plugins": [
+            [
+                "expo-barcode-scanner",
+                {
+                    "cameraPermission": "Allow $(PRODUCT_NAME) to access camera."
+                }
+            ]
+        ],
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/images/logo.png",
+                "backgroundColor": "#ffffff"
+            },
+            "permissions": ["CAMERA", "android.permission.CAMERA"],
+            "package": "com.mpos.posapp"
+        },
+        "extra": {
+            "eas": {
+                "projectId": "ca48bbd1-03ff-4681-9161-e71ff089a316"
+            }
+        },
+        "owner": "williamcorotan",
+        "runtimeVersion": {
+            "policy": "appVersion"
+        },
+        "updates": {
+            "url": "https://u.expo.dev/ca48bbd1-03ff-4681-9161-e71ff089a316"
         }
-      ]
-    ],
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "permissions": ["CAMERA"],
-      "package": "com.williamcorotan.posapp"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "ca48bbd1-03ff-4681-9161-e71ff089a316"
-      }
-    },
-    "owner": "williamcorotan"
-  }
+    }
 }
