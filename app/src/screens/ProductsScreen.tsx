@@ -21,6 +21,7 @@ export default function ProductsScreen() {
     const { products, setProducts } = useProducts();
     const [refreshing, setRefreshing] = useState(false);
     const [snackBarVisible, setSnackBarVisible] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const { addToCart } = useCart();
@@ -28,10 +29,6 @@ export default function ProductsScreen() {
     useEffect(() => {
         loadProducts();
     }, []);
-
-    const onOpenSnackBar = () => setSnackBarVisible(true);
-
-    const onDismissSnackBar = () => setSnackBarVisible(false);
 
     const loadProducts = async () => {
         try {
@@ -41,7 +38,8 @@ export default function ProductsScreen() {
             const productsData = await fetchProducts(userId);
             setProducts(productsData);
         } catch (error) {
-            console.error("Error loading products:", error);
+            setErrorMessage("Failed to load products");
+            setSnackBarVisible(true);
         }
     };
 
@@ -60,28 +58,46 @@ export default function ProductsScreen() {
     const handleAddToCart = (code: string) => {
         const product = products.find((p) => p.code === code);
         if (product) {
-            addToCart(product, 1);
-            onOpenSnackBar();
+            try {
+                if (product.stock <= 0) {
+                    throw new Error("Product is out of stock");
+                }
+                addToCart(product, 1);
+                setErrorMessage("Product added to cart successfully");
+                setSnackBarVisible(true);
+            } catch (error) {
+                if (error instanceof Error) {
+                    setErrorMessage(error.message);
+                } else {
+                    setErrorMessage("Failed to add product to cart");
+                }
+                setSnackBarVisible(true);
+            }
         } else {
-            // You might want to show an error message here
-            alert("Product not found");
+            setErrorMessage("Product not found");
+            setSnackBarVisible(true);
         }
     };
 
     const handleProductPress = (product: Product) => {
         setSelectedProduct(product);
         setModalVisible(true);
-      };
+    };
 
     const renderProduct = ({ item }: { item: Product }) => (
-        <Card style={styles.card}  onPress={() => handleProductPress(item)}>
+        <Card style={styles.card} onPress={() => handleProductPress(item)}>
             <Card.Content>
                 <Title>{item.name}</Title>
                 <Paragraph>Code: {item.code}</Paragraph>
                 <Paragraph>Price: PHP{item.sell_price}</Paragraph>
-                <Paragraph>Stock: {item.stock}</Paragraph>
-                <Button onPress={() => handleAddToCart(item.code)}>
-                    Add to Cart
+                <Paragraph style={item.stock <= 0 ? styles.outOfStock : undefined}>
+                    Stock: {item.stock}
+                </Paragraph>
+                <Button 
+                    onPress={() => handleAddToCart(item.code)}
+                    disabled={item.stock <= 0}
+                >
+                    {item.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
                 </Button>
             </Card.Content>
         </Card>
@@ -114,20 +130,21 @@ export default function ProductsScreen() {
 
             <Snackbar
                 visible={snackBarVisible}
-                onDismiss={onDismissSnackBar}
+                onDismiss={() => setSnackBarVisible(false)}
+                duration={3000}
                 action={{
                     label: "Dismiss",
-                    onPress: onDismissSnackBar,
+                    onPress: () => setSnackBarVisible(false),
                 }}
             >
-                Product added to cart!
+                {errorMessage}
             </Snackbar>
 
             <ProductModal
-        visible={modalVisible}
-        onDismiss={() => setModalVisible(false)}
-        product={selectedProduct}
-      />
+                visible={modalVisible}
+                onDismiss={() => setModalVisible(false)}
+                product={selectedProduct}
+            />
         </View>
     );
 }
@@ -146,5 +163,9 @@ const styles = StyleSheet.create({
     card: {
         flex: 1,
         margin: 8,
+    },
+    outOfStock: {
+        color: 'red',
+        fontWeight: 'bold',
     },
 });
