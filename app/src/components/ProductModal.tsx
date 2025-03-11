@@ -1,7 +1,10 @@
 import React from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
-import { Modal, Portal, Text, Button } from 'react-native-paper';
+import { Modal, Portal, Text } from 'react-native-paper';
 import { Product } from '../types';
+import { colors, typography, spacing, shadows } from '../theme';
+import { Button } from './ui/Button';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ProductModalProps {
   visible: boolean;
@@ -12,55 +15,117 @@ interface ProductModalProps {
 export function ProductModal({ visible, onDismiss, product }: ProductModalProps) {
   if (!product) return null;
 
+  const isOutOfStock = product.stock <= 0;
+  const isLowStock = product.stock <= (product.lowStockLevel || 0);
+  
+  const getStockStatusColor = () => {
+    if (isOutOfStock) return colors.error;
+    if (isLowStock) return colors.warning;
+    return colors.success;
+  };
+
+  const getStockStatusText = () => {
+    if (isOutOfStock) return 'Out of Stock';
+    if (isLowStock) return 'Low Stock';
+    return 'In Stock';
+  };
+
+  const getRandomColor = (id: number) => {
+    const colors = [
+      '#3498db', '#2ecc71', '#e74c3c', '#f39c12', 
+      '#9b59b6', '#1abc9c', '#d35400', '#34495e'
+    ];
+    return colors[id % colors.length];
+  };
+
   return (
     <Portal>
-      <Modal visible={visible} onDismiss={onDismiss} contentContainerStyle={styles.container}>
-        <ScrollView>
-          <Text style={styles.title}>{product.name}</Text>
+      <Modal 
+        visible={visible} 
+        onDismiss={onDismiss} 
+        contentContainerStyle={styles.container}
+      >
+        <View style={[styles.header, { backgroundColor: getRandomColor(product.id) }]}>
+          <Text style={styles.productInitial}>{product.name.charAt(0).toUpperCase()}</Text>
+          <Button
+            title=""
+            variant="ghost"
+            icon={<Ionicons name="close" size={24} color={colors.white} />}
+            onPress={onDismiss}
+            style={styles.closeButton}
+          />
+        </View>
+        
+        <ScrollView style={styles.content}>
+          <Text style={styles.productName}>{product.name}</Text>
           
-          <View style={styles.section}>
-            <Text style={styles.label}>Code:</Text>
-            <Text style={styles.value}>{product.code}</Text>
+          <View style={styles.codeContainer}>
+            <Ionicons name="barcode-outline" size={20} color={colors.gray600} />
+            <Text style={styles.codeText}>{product.code}</Text>
           </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Description:</Text>
-            <Text style={styles.value}>{product.description || 'No description'}</Text>
+          
+          <View style={styles.priceContainer}>
+            <View style={styles.priceItem}>
+              <Text style={styles.priceLabel}>Buy Price</Text>
+              <Text style={styles.buyPrice}>PHP {product.buyPrice.toFixed(2)}</Text>
+            </View>
+            
+            <View style={styles.priceItem}>
+              <Text style={styles.priceLabel}>Sell Price</Text>
+              <Text style={styles.sellPrice}>PHP {product.sellPrice.toFixed(2)}</Text>
+            </View>
           </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Buy Price:</Text>
-            <Text style={styles.value}>PHP {product.buyPrice.toFixed(2)}</Text>
+          
+          <View style={styles.stockContainer}>
+            <View style={styles.stockInfo}>
+              <Text style={styles.stockLabel}>Current Stock</Text>
+              <Text style={styles.stockValue}>{product.stock}</Text>
+            </View>
+            
+            <View style={[styles.stockStatus, { backgroundColor: getStockStatusColor() + '20' }]}>
+              <Ionicons 
+                name={isOutOfStock ? "alert-circle" : "checkmark-circle"} 
+                size={16} 
+                color={getStockStatusColor()} 
+              />
+              <Text style={[styles.stockStatusText, { color: getStockStatusColor() }]}>
+                {getStockStatusText()}
+              </Text>
+            </View>
           </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Sell Price:</Text>
-            <Text style={styles.value}>PHP {product.sellPrice.toFixed(2)}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Stock:</Text>
-            <Text style={styles.value}>{product.stock}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Low Stock Level:</Text>
-            <Text style={styles.value}>{product.lowStockLevel || 'Not set'}</Text>
-          </View>
-
+          
+          {product.lowStockLevel !== undefined && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Low Stock Alert</Text>
+              <Text style={styles.infoValue}>{product.lowStockLevel}</Text>
+            </View>
+          )}
+          
           {product.expirationDate && (
-            <View style={styles.section}>
-              <Text style={styles.label}>Expiration Date:</Text>
-              <Text style={styles.value}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Expiration Date</Text>
+              <Text style={styles.infoValue}>
                 {new Date(product.expirationDate).toLocaleDateString()}
               </Text>
             </View>
           )}
+          
+          {product.description && (
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.descriptionLabel}>Description</Text>
+              <Text style={styles.descriptionText}>{product.description}</Text>
+            </View>
+          )}
         </ScrollView>
         
-        <Button mode="contained" onPress={onDismiss} style={styles.button}>
-          Close
-        </Button>
+        <View style={styles.footer}>
+          <Button
+            title="Close"
+            variant="outline"
+            onPress={onDismiss}
+            fullWidth
+          />
+        </View>
       </Modal>
     </Portal>
   );
@@ -68,29 +133,139 @@ export function ProductModal({ visible, onDismiss, product }: ProductModalProps)
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
-    padding: 20,
-    margin: 20,
-    borderRadius: 8,
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    overflow: 'hidden',
+    margin: spacing.md,
     maxHeight: '80%',
+    ...shadows.lg,
   },
-  title: {
-    fontSize: 24,
+  header: {
+    height: 150,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  productInitial: {
+    fontSize: 60,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
-  section: {
-    marginBottom: 16,
+  closeButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
   },
-  label: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+  content: {
+    padding: spacing.lg,
   },
-  value: {
-    fontSize: 16,
+  productName: {
+    fontSize: typography.fontSize['2xl'],
+    fontFamily: typography.fontFamily.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
-  button: {
-    marginTop: 20,
+  codeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  codeText: {
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+    backgroundColor: colors.gray100,
+    borderRadius: 8,
+    padding: spacing.md,
+  },
+  priceItem: {
+    alignItems: 'center',
+  },
+  priceLabel: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  buyPrice: {
+    fontSize: typography.fontSize.lg,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textPrimary,
+  },
+  sellPrice: {
+    fontSize: typography.fontSize.lg,
+    fontFamily: typography.fontFamily.bold,
+    color: colors.primary,
+  },
+  stockContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  stockInfo: {
+    alignItems: 'flex-start',
+  },
+  stockLabel: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  stockValue: {
+    fontSize: typography.fontSize.xl,
+    fontFamily: typography.fontFamily.bold,
+    color: colors.textPrimary,
+  },
+  stockStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 16,
+  },
+  stockStatusText: {
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily.medium,
+    marginLeft: spacing.xs,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  infoLabel: {
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+  },
+  infoValue: {
+    fontSize: typography.fontSize.base,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textPrimary,
+  },
+  descriptionContainer: {
+    marginTop: spacing.lg,
+  },
+  descriptionLabel: {
+    fontSize: typography.fontSize.base,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  descriptionText: {
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    lineHeight: typography.lineHeight.relaxed,
+  },
+  footer: {
+    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
   },
 });

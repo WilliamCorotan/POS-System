@@ -1,51 +1,92 @@
 export interface Product {
-  id: number;
-  name: string;
-  code: string;
-  description: string;
-  image: string;
-  buy_price: number;
-  sell_price: number;
-  stock: number;
-  low_stock_level: number;
-  expiration_date: string;
-  unit_measurements_id: number;
-}
-
-export interface CartItem {
-  id: number;
-  name: string;
-  product_id: number,
-  quantity: number;
-  price: number;
-}
-
-export interface Transaction {
-  id: number;
-  payment_method: string;
-  date_of_transaction: string;
-  email_to: string;
-  cash_received: number;
-  total_price: number;
-}
-
-export interface PaymentMethod {
-  id: number;
-  name: string;
-}
-
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  profile_picture: string;
-}
-
-export type RootStackParamList = {
-  ProductsList: undefined;
-  AddProduct: undefined;
-  EditProduct: { product: Product };
-  PaymentMethods: undefined;
-  AddPaymentMethod: undefined;
-  EditPaymentMethod: { paymentMethod: PaymentMethod };
-};
+    id: number;
+    name: string;
+    code: string;
+    description?: string;
+    image?: string;
+    buyPrice: number;
+    sellPrice: number;
+    stock: number;
+    lowStockLevel?: number;
+    expirationDate?: string;
+    unitMeasurementsId?: number;
+    categoryId?: number;
+    clerkId: string;
+  }
+  
+  export interface CartItem {
+    id: number;
+    name: string;
+    product_id: number,
+    quantity: number;
+    price: number;
+  }
+  
+  export interface Transaction {
+    id: number;
+    paymentMethodId: number;
+    dateOfTransaction: string;
+    emailTo?: string;
+    cashReceived?: number;
+    totalPrice: number;
+    status: string;
+    items?: string;
+    paymentMethodName?: string;
+    referenceNumber?: string;
+  }
+  
+  export interface PaymentMethod {
+    id: number;
+    name: string;
+    clerkId?: string;
+  }
+  
+  export interface User {
+    id: number;
+    name: string;
+    email: string;
+    profile_picture: string;
+  }
+  
+  export type RefundType = "full" | "partial";
+  
+  export interface RefundItem {
+    orderId: number;
+    productId: number;
+    productName: string;
+    originalQuantity: number;
+    refundedQuantity: number;
+    availableQuantity: number;
+    quantityToRefund: number;
+    unitPrice: number;
+    totalRefund: number;
+    refundStatus?: "none" | "partial" | "full";
+  }
+  
+  export interface RefundFormData {
+    transactionId: number;
+    reason: string;
+    type: RefundType;
+    items: RefundItem[];
+    totalAmount: number;
+  }
+  
+  export interface Refund {
+    id: number;
+    transactionId: number;
+    dateOfRefund: string;
+    totalAmount: number;
+    reason?: string;
+    type: RefundType;
+    clerkId: string;
+    items?: RefundItem[];
+  }
+  
+  export type RootStackParamList = {
+    ProductsList: undefined;
+    AddProduct: undefined;
+    EditProduct: { product: Product };
+    PaymentMethods: undefined;
+    AddPaymentMethod: undefined;
+    EditPaymentMethod: { paymentMethod: PaymentMethod };
+  };
