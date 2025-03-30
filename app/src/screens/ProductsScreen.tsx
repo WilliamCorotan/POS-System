@@ -73,6 +73,14 @@ export default function ProductsScreen() {
         setModalVisible(true);
     };
 
+    const getRandomColor = (id: number) => {
+        const colors = [
+            '#3498db', '#2ecc71', '#e74c3c', '#f39c12', 
+            '#9b59b6', '#1abc9c', '#d35400', '#34495e'
+        ];
+        return colors[id % colors.length];
+    };
+
     const renderProduct = ({ item }: { item: Product }) => (
         <TouchableOpacity 
             style={styles.productCard} 
@@ -102,41 +110,33 @@ export default function ProductsScreen() {
                 <Text style={styles.productCode} numberOfLines={1}>
                     {item.code}
                 </Text>
-                <View style={styles.productPriceRow}>
-                    <Text style={styles.productPrice}>
-                        PHP {item.sellPrice.toFixed(2)}
-                    </Text>
-                    <Text style={styles.productStock}>
-                        Stock: {item.stock}
-                    </Text>
+                <View style={styles.productFooter}>
+                    <View style={styles.productPriceRow}>
+                        <Text style={styles.productPrice}>
+                            PHP {item.sellPrice.toFixed(2)}
+                        </Text>
+                        <Text style={styles.productStock}>
+                            Stock: {item.stock}
+                        </Text>
+                    </View>
+                    <TouchableOpacity 
+                        style={[
+                            styles.addButton,
+                            item.stock <= 0 && styles.disabledButton
+                        ]}
+                        onPress={() => handleAddToCart(item)}
+                        disabled={item.stock <= 0}
+                    >
+                        <Ionicons 
+                            name="add" 
+                            size={24} 
+                            color={item.stock <= 0 ? colors.gray400 : colors.white} 
+                        />
+                    </TouchableOpacity>
                 </View>
             </View>
-            
-            <TouchableOpacity 
-                style={[
-                    styles.addButton,
-                    item.stock <= 0 && styles.disabledButton
-                ]}
-                onPress={() => handleAddToCart(item)}
-                disabled={item.stock <= 0}
-            >
-                <Ionicons 
-                    name="add" 
-                    size={24} 
-                    color={item.stock <= 0 ? colors.gray400 : colors.white} 
-                />
-            </TouchableOpacity>
         </TouchableOpacity>
     );
-
-    // Function to generate a random color based on product id
-    const getRandomColor = (id: number) => {
-        const colors = [
-            '#3498db', '#2ecc71', '#e74c3c', '#f39c12', 
-            '#9b59b6', '#1abc9c', '#d35400', '#34495e'
-        ];
-        return colors[id % colors.length];
-    };
 
     return (
         <View style={styles.container}>
@@ -251,10 +251,14 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         marginBottom: spacing.sm,
     },
+    productFooter: {
+        marginTop: 'auto',
+    },
     productPriceRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: spacing.sm,
     },
     productPrice: {
         fontSize: typography.fontSize.base,
@@ -266,13 +270,10 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
     },
     addButton: {
-        position: 'absolute',
-        bottom: spacing.sm,
-        right: spacing.sm,
         backgroundColor: colors.primary,
-        width: 36,
+        width: '100%',
         height: 36,
-        borderRadius: 18,
+        borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
         ...shadows.sm,

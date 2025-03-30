@@ -261,7 +261,6 @@ const styles = StyleSheet.create({
   descriptionText: {
     fontSize: typography.fontSize.base,
     color: colors.textSecondary,
-    lineHeight: typography.lineHeight.relaxed,
   },
   footer: {
     padding: spacing.md,
