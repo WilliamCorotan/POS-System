@@ -10,8 +10,6 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-    console.log("checkk >>", req.headers);
-
     // For mobile app requests, validate the bearer token
     if (req.headers.get("authorization")) {
         const userId = await validateToken(req);
@@ -46,7 +44,6 @@ export default clerkMiddleware(async (auth, req) => {
             return NextResponse.redirect(new URL("/dashboard", req.url));
         }
 
-        console.log("in here", userId);
         const requestHeaders = new Headers(req.headers);
         requestHeaders.set("x-clerk-user-id", userId ?? "");
         return NextResponse.next({

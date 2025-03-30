@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 
 interface UnitMeasurementFormData {
     name: string;
@@ -22,6 +23,7 @@ interface UnitMeasurementFormProps {
     onSubmit: (data: UnitMeasurementFormData) => void;
     initialData?: UnitMeasurementFormData | null;
     mode: "create" | "edit";
+    isLoading?: boolean;
 }
 
 export function UnitMeasurementForm({
@@ -30,10 +32,23 @@ export function UnitMeasurementForm({
     onSubmit,
     initialData,
     mode,
+    isLoading = false,
 }: UnitMeasurementFormProps) {
-    const [formData, setFormData] = useState<UnitMeasurementFormData>(
-        initialData || { name: "", description: "" }
-    );
+    const [formData, setFormData] = useState<UnitMeasurementFormData>({
+        name: "",
+        description: "",
+    });
+
+    useEffect(() => {
+        if (initialData) {
+            setFormData({
+                name: initialData.name,
+                description: initialData.description,
+            });
+        } else {
+            setFormData({ name: "", description: "" });
+        }
+    }, [initialData]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,6 +85,7 @@ export function UnitMeasurementForm({
                                 }
                                 className="col-span-3"
                                 required
+                                disabled={isLoading}
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -86,11 +102,16 @@ export function UnitMeasurementForm({
                                     })
                                 }
                                 className="col-span-3"
+                                required
+                                disabled={isLoading}
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="submit">
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading && (
+                                <Spinner className="mr-2" size="sm" />
+                            )}
                             {mode === "create" ? "Create" : "Save"}
                         </Button>
                     </DialogFooter>

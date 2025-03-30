@@ -5,19 +5,19 @@ export const files = sqliteTable("files", {
   filename: text("filename"),
   filepath: text("filepath"),
   mimetype: text("mimetype"),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID to track file ownership
+  clerkId: text("clerk_id").notNull(),
 });
 
 export const payments = sqliteTable("payments", {
   id: integer("id").primaryKey(),
   name: text("name"),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for payment method ownership
+  clerkId: text("clerk_id").notNull(),
   deleted: text("deleted"),
 });
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey(),
-  clerkId: text("clerk_id").notNull().unique(), // Add unique clerk ID
+  clerkId: text("clerk_id").notNull().unique(),
   name: text("name"),
   email: text("email"),
   password: text("password"),
@@ -28,41 +28,41 @@ export const users = sqliteTable("users", {
 export const contactTypes = sqliteTable("contacts_types", {
   id: integer("id").primaryKey(),
   name: text("name"),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for contact type ownership
+  clerkId: text("clerk_id").notNull(),
 });
 
 export const userContacts = sqliteTable("user_contacts", {
   id: integer("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   contactId: integer("contact_id"),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for contact ownership
+  clerkId: text("clerk_id").notNull(),
 });
 
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey(),
   name: text("name"),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for settings ownership
+  clerkId: text("clerk_id").notNull(),
 });
 
 export const userSettings = sqliteTable("user_settings", {
   id: integer("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   settingsId: integer("settings_id").references(() => settings.id),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for user settings ownership
+  clerkId: text("clerk_id").notNull(),
 });
 
 export const unitMeasurements = sqliteTable("unit_measurements", {
   id: integer("id").primaryKey(),
   name: text("name"),
   description: text("description"),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for unit measurement ownership
+  clerkId: text("clerk_id").notNull(),
 });
 
 export const productCategories = sqliteTable("product_categories", {
   id: integer("id").primaryKey(),
   name: text("name"),
   description: text("description"),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for category ownership
+  clerkId: text("clerk_id").notNull(),
   deleted: text("deleted"),
 });
 
@@ -72,6 +72,7 @@ export const products = sqliteTable("products", {
   code: text("code").notNull(),
   description: text("description"),
   image: text("image").references(() => files.id),
+  imageUrl: text("image_url"),
   buyPrice: real("buy_price").notNull(),
   sellPrice: real("sell_price").notNull(),
   stock: integer("stock").notNull(),
@@ -81,8 +82,21 @@ export const products = sqliteTable("products", {
     () => unitMeasurements.id
   ),
   categoryId: integer("category_id").references(() => productCategories.id),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for product ownership
+  clerkId: text("clerk_id").notNull(),
   deleted: text("deleted"),
+});
+
+export const restockHistory = sqliteTable("restock_history", {
+  id: integer("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id),
+  quantity: integer("quantity").notNull(),
+  previousStock: integer("previous_stock").notNull(),
+  newStock: integer("new_stock").notNull(),
+  previousExpirationDate: text("previous_expiration_date"),
+  newExpirationDate: text("new_expiration_date"),
+  dateOfRestock: text("date_of_restock").notNull(),
+  notes: text("notes"),
+  clerkId: text("clerk_id").notNull(),
 });
 
 export const transactions = sqliteTable("transactions", {
@@ -93,7 +107,8 @@ export const transactions = sqliteTable("transactions", {
   cashReceived: real("cash_received"),
   totalPrice: real("total_price").notNull(),
   status: text("status").notNull().default("active"),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for transaction ownership
+  clerkId: text("clerk_id").notNull(),
+  referenceNumber: text("reference_number"),
 });
 
 export const orders = sqliteTable("orders", {
@@ -101,9 +116,9 @@ export const orders = sqliteTable("orders", {
   productId: integer("product_id").references(() => products.id),
   quantity: integer("quantity").notNull(),
   transactionId: integer("transaction_id").references(() => transactions.id),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for order ownership
+  clerkId: text("clerk_id").notNull(),
   refundedQuantity: integer("refunded_quantity").default(0),
-  refundStatus: text("refund_status").default("none"), // none, partial, full
+  refundStatus: text("refund_status").default("none"),
 });
 
 export const refunds = sqliteTable("refunds", {
@@ -112,7 +127,7 @@ export const refunds = sqliteTable("refunds", {
   dateOfRefund: text("date_of_refund").notNull(),
   totalAmount: real("total_amount").notNull(),
   reason: text("reason"),
-  type: text("type").notNull(), // full, partial
+  type: text("type").notNull(),
   clerkId: text("clerk_id").notNull(),
 });
 
@@ -130,5 +145,5 @@ export const transactionsHistory = sqliteTable("transactions_history", {
   id: integer("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   transactionId: integer("transaction_id").references(() => transactions.id),
-  clerkId: text("clerk_id").notNull(), // Add clerk ID for transaction history ownership
+  clerkId: text("clerk_id").notNull(),
 });

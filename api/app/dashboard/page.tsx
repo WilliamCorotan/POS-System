@@ -68,8 +68,11 @@ export default function DashboardPage() {
             const monthYear = `${date.getFullYear()}-${String(
                 date.getMonth() + 1
             ).padStart(2, "0")}`;
-            monthlyTotals[monthYear] =
-                (monthlyTotals[monthYear] || 0) + transaction.totalPrice;
+
+            // Calculate net amount after refunds
+            const netAmount = transaction.totalPrice - (transaction.totalRefund || 0);
+            
+            monthlyTotals[monthYear] = (monthlyTotals[monthYear] || 0) + netAmount;
         });
 
         return Object.entries(monthlyTotals)
@@ -85,8 +88,9 @@ export default function DashboardPage() {
         const yearlyTotals: { [key: string]: number } = {};
         filteredTransactions.forEach((transaction) => {
             const year = new Date(transaction.dateOfTransaction).getFullYear();
-            yearlyTotals[year] =
-                (yearlyTotals[year] || 0) + transaction.totalPrice;
+            // Calculate net amount after refunds
+            const netAmount = transaction.totalPrice - (transaction.totalRefund || 0);
+            yearlyTotals[year] = (yearlyTotals[year] || 0) + netAmount;
         });
 
         return Object.entries(yearlyTotals)
@@ -99,24 +103,26 @@ export default function DashboardPage() {
 
     // Calculate metrics based on filtered transactions
     const metrics = useMemo(() => {
-        // Calculate total sales
+        // Calculate total sales (excluding refunds)
         const totalSales = filteredTransactions.reduce(
-            (sum, transaction) => sum + transaction.totalPrice,
+            (sum, transaction) => sum + (transaction.totalPrice - (transaction.totalRefund || 0)),
             0
         );
 
-        // Calculate total cost from items
+        // Calculate total cost from items (excluding refunded items)
         const totalCost = filteredTransactions.reduce((sum, transaction) => {
             try {
-                const items = JSON.parse(transaction.items || "[]");
-                return (
-                    sum +
-                    items.reduce(
-                        (itemSum: number, item: any) =>
-                            itemSum + item.quantity * (item.productBuyPrice || 0),
-                        0
-                    )
+                const items = JSON.parse(transaction.items || "[]") as TransactionItem[];
+                const refundedAmount = transaction.totalRefund || 0;
+                const refundRatio = refundedAmount > 0 ? refundedAmount / transaction.totalPrice : 0;
+                
+                // Adjust cost based on refund ratio
+                const itemsCost = items.reduce(
+                    (itemSum, item) => itemSum + item.quantity * (item.productBuyPrice || 0),
+                    0
                 );
+                
+                return sum + (itemsCost * (1 - refundRatio));
             } catch (error) {
                 console.error("Error parsing transaction items:", error);
                 return sum;
@@ -128,11 +134,10 @@ export default function DashboardPage() {
         const marginPercentage =
             totalSales > 0 ? (margin / totalSales) * 100 : 0;
 
-        const totalTransactions = filteredTransactions.length;
-
-        // Calculate performance (comparing to previous period)
-        // This is more complex with variable date ranges, so we'll simplify
-        const performance = 0; // We'll leave this at 0 for now
+        // Count only non-refunded transactions
+        const totalTransactions = filteredTransactions.filter(t => 
+            t.status !== "refunded" && t.totalPrice > (t.totalRefund || 0)
+        ).length;
 
         return {
             totalSales,
@@ -140,7 +145,6 @@ export default function DashboardPage() {
             margin,
             marginPercentage,
             totalTransactions,
-            performance,
         };
     }, [filteredTransactions]);
 
@@ -159,21 +163,28 @@ export default function DashboardPage() {
         filteredTransactions.forEach(transaction => {
             try {
                 const items = JSON.parse(transaction.items || "[]") as TransactionItem[];
+                const refundRatio = transaction.totalRefund ? transaction.totalRefund / transaction.totalPrice : 0;
+                
                 items.forEach(item => {
+                    // Adjust quantities and amounts based on refund ratio
+                    const adjustedQuantity = item.quantity * (1 - refundRatio);
+                    const adjustedSales = adjustedQuantity * item.productSellPrice;
+                    const adjustedCost = adjustedQuantity * item.productBuyPrice;
+                    
                     const existing = itemMap.get(item.productId);
                     if (existing) {
-                        existing.quantity += item.quantity;
-                        existing.totalSales += item.quantity * item.productSellPrice;
-                        existing.profit += item.quantity * (item.productSellPrice - item.productBuyPrice);
+                        existing.quantity += adjustedQuantity;
+                        existing.totalSales += adjustedSales;
+                        existing.profit += adjustedSales - adjustedCost;
                     } else {
                         itemMap.set(item.productId, {
                             id: item.productId,
                             name: item.productName,
-                            quantity: item.quantity,
-                            totalSales: item.quantity * item.productSellPrice,
+                            quantity: adjustedQuantity,
+                            totalSales: adjustedSales,
                             buyPrice: item.productBuyPrice,
                             sellPrice: item.productSellPrice,
-                            profit: item.quantity * (item.productSellPrice - item.productBuyPrice)
+                            profit: adjustedSales - adjustedCost
                         });
                     }
                 });
@@ -459,7 +470,7 @@ export default function DashboardPage() {
                                     itemsSold.map((item) => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">{item.name}</TableCell>
-                                            <TableCell className="text-right">{item.quantity}</TableCell>
+                                            <TableCell className="text-right">{item.quantity.toFixed(2)}</TableCell>
                                             <TableCell className="text-right">PHP {item.sellPrice.toFixed(2)}</TableCell>
                                             <TableCell className="text-right">PHP {item.totalSales.toFixed(2)}</TableCell>
                                             <TableCell className="text-right">PHP {item.profit.toFixed(2)}</TableCell>

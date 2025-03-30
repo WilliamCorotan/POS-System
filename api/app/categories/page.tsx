@@ -11,10 +11,12 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { TableLoading } from "@/components/ui/table-loading";
 import { CategoryForm } from "@/components/categories/CategoryForm";
+import { CategoryViewDialog } from "@/components/categories/CategoryViewDialog";
 import { useCategories } from "@/hooks/use-categories";
 import { Category } from "@/types";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Eye } from "lucide-react";
 
 export default function CategoriesPage() {
     const { userId } = useAuth();
@@ -23,6 +25,10 @@ export default function CategoriesPage() {
     const [editingCategory, setEditingCategory] = useState<Category | null>(
         null
     );
+    const [viewingCategory, setViewingCategory] = useState<Category | null>(
+        null
+    );
+    const [isActionLoading, setIsActionLoading] = useState(false);
 
     const handleCreate = () => {
         setEditingCategory(null);
@@ -34,9 +40,14 @@ export default function CategoriesPage() {
         setOpenDialog(true);
     };
 
+    const handleView = (category: Category) => {
+        setViewingCategory(category);
+    };
+
     const handleDelete = async (id: number) => {
         if (confirm("Are you sure you want to delete this category?")) {
             try {
+                setIsActionLoading(true);
                 const response = await fetch(`/api/categories/${id}`, {
                     method: "DELETE",
                 });
@@ -44,16 +55,14 @@ export default function CategoriesPage() {
                 refreshCategories();
             } catch (error) {
                 console.error("Error deleting category:", error);
+            } finally {
+                setIsActionLoading(false);
             }
         }
     };
 
     if (!userId) {
         return <div>Please sign in to view categories</div>;
-    }
-
-    if (loading) {
-        return <div>Loading categories...</div>;
     }
 
     if (error) {
@@ -64,7 +73,9 @@ export default function CategoriesPage() {
         <div className="container mx-auto p-6 space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Categories</h1>
-                <Button onClick={handleCreate}>Add Category</Button>
+                <Button onClick={handleCreate} disabled={isActionLoading}>
+                    Add Category
+                </Button>
             </div>
 
             <div className="rounded-md border">
@@ -77,32 +88,61 @@ export default function CategoriesPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {categories.map((category) => (
-                            <TableRow key={category.id}>
-                                <TableCell>{category.name}</TableCell>
-                                <TableCell>{category.description}</TableCell>
-                                <TableCell>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleEdit(category)}
-                                        >
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() =>
-                                                handleDelete(category.id)
-                                            }
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
+                        {loading || isActionLoading ? (
+                            <TableLoading columns={3} />
+                        ) : categories.length === 0 ? (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={3}
+                                    className="text-center py-4"
+                                >
+                                    No categories found
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        ) : (
+                            categories.map((category) => (
+                                <TableRow key={category.id}>
+                                    <TableCell>{category.name}</TableCell>
+                                    <TableCell>
+                                        {category.description}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() =>
+                                                    handleView(category)
+                                                }
+                                                disabled={isActionLoading}
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() =>
+                                                    handleEdit(category)
+                                                }
+                                                disabled={isActionLoading}
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() =>
+                                                    handleDelete(category.id)
+                                                }
+                                                disabled={isActionLoading}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
                     </TableBody>
                 </Table>
             </div>
@@ -112,6 +152,7 @@ export default function CategoriesPage() {
                 onOpenChange={setOpenDialog}
                 onSubmit={async (data) => {
                     try {
+                        setIsActionLoading(true);
                         const url = editingCategory
                             ? `/api/categories/${editingCategory.id}`
                             : "/api/categories";
@@ -128,11 +169,22 @@ export default function CategoriesPage() {
                         refreshCategories();
                     } catch (error) {
                         console.error("Error saving category:", error);
+                    } finally {
+                        setIsActionLoading(false);
                     }
                 }}
                 initialData={editingCategory}
                 mode={editingCategory ? "edit" : "create"}
+                isLoading={isActionLoading}
             />
+
+            {viewingCategory && (
+                <CategoryViewDialog
+                    open={!!viewingCategory}
+                    onOpenChange={(open) => !open && setViewingCategory(null)}
+                    category={viewingCategory}
+                />
+            )}
         </div>
     );
 }

@@ -28,9 +28,23 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        console.log('request >>', body);
         const { items, ...transactionData } = body;
-        
+
+        // Validate reference number for GCash payments
+        const isGcash =
+            transactionData.payment_method_id &&
+            (await isGcashPaymentMethod(
+                parseInt(transactionData.payment_method_id),
+                userId
+            ));
+
+        if (isGcash && !transactionData.reference_number) {
+            return NextResponse.json(
+                { error: "Reference number is required for GCash payments" },
+                { status: 400 }
+            );
+        }
+
         const newTransaction = await createTransaction(
             transactionData,
             items,
@@ -43,5 +57,36 @@ export async function POST(request: Request) {
             { error: "Failed to create transaction" },
             { status: 500 }
         );
+    }
+}
+
+// Helper function to check if a payment method is GCash
+async function isGcashPaymentMethod(
+    paymentMethodId: number,
+    userId: string
+): Promise<boolean> {
+    try {
+        const { db } = await import("@/lib/db");
+        const { payments } = await import("@/lib/db/schema");
+        const { eq, and } = await import("drizzle-orm");
+
+        const paymentMethod = await db
+            .select()
+            .from(payments)
+            .where(
+                and(
+                    eq(payments.id, paymentMethodId),
+                    eq(payments.clerkId, userId)
+                )
+            )
+            .limit(1);
+
+        return (
+            paymentMethod.length > 0 &&
+            paymentMethod[0]?.name?.toLowerCase() === "gcash"
+        );
+    } catch (error) {
+        console.error("Error checking payment method:", error);
+        return false;
     }
 }

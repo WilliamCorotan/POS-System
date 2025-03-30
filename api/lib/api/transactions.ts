@@ -1,5 +1,11 @@
 import { db } from "@/lib/db";
-import { transactions, orders, payments, products } from "@/lib/db/schema";
+import {
+    transactions,
+    orders,
+    payments,
+    products,
+    refunds,
+} from "@/lib/db/schema";
 import { eq, sql, getTableColumns, and } from "drizzle-orm";
 
 type TransactionFromApp = {
@@ -11,6 +17,7 @@ type TransactionFromApp = {
     cash_received: string;
     email_to?: string;
     clerk_id?: string;
+    reference_number?: string;
 };
 
 type TransactionItemFromApp = {
@@ -39,6 +46,23 @@ export async function getTransactions(userId: string) {
                 WHERE ${orders.transactionId} = ${transactions.id}
             )`.as("items"),
             paymentMethodName: payments.name,
+            totalRefund: sql`(
+                SELECT COALESCE(SUM(${refunds.totalAmount}), 0)
+                FROM ${refunds}
+                WHERE ${refunds.transactionId} = ${transactions.id}
+            )`.as("totalRefund"),
+            refundReasons: sql`(
+                SELECT GROUP_CONCAT(${refunds.reason}, '; ')
+                FROM ${refunds}
+                WHERE ${refunds.transactionId} = ${transactions.id}
+                AND ${refunds.reason} IS NOT NULL
+            )`.as("refundReasons"),
+            totalCost: sql`(
+                SELECT COALESCE(SUM(${products.buyPrice} * ${orders.quantity}), 0)
+                FROM ${orders}
+                JOIN ${products} ON ${orders.productId} = ${products.id}
+                WHERE ${orders.transactionId} = ${transactions.id}
+            )`.as("totalCost"),
         })
         .from(transactions)
         .leftJoin(payments, eq(transactions.paymentMethodId, payments.id))
@@ -71,6 +95,7 @@ export async function createTransaction(
                 emailTo: data.email_to ?? null,
                 totalPrice: parseFloat(data.total_price),
                 cashReceived: parseFloat(data.cash_received),
+                referenceNumber: data.reference_number ?? null,
                 clerkId: userId,
             };
 

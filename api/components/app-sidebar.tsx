@@ -4,6 +4,7 @@ import {
     ScanBarcode,
     ShoppingCart,
     FolderTree,
+    SquareChartGantt,
 } from "lucide-react";
 
 import {
@@ -29,6 +30,11 @@ const items = [
         title: "Products",
         url: "/products",
         icon: ScanBarcode,
+    },
+    {
+        title: "Inventory",
+        url: "/inventory",
+        icon: SquareChartGantt,
     },
     {
         title: "Categories",

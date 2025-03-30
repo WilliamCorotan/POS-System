@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Category } from "@/types";
+import { Spinner } from "@/components/ui/spinner";
 
 interface CategoryFormData {
     name: string;
@@ -23,6 +24,7 @@ interface CategoryFormProps {
     onSubmit: (data: CategoryFormData) => void;
     initialData?: Category | null;
     mode: "create" | "edit";
+    isLoading?: boolean;
 }
 
 export function CategoryForm({
@@ -31,6 +33,7 @@ export function CategoryForm({
     onSubmit,
     initialData,
     mode,
+    isLoading = false,
 }: CategoryFormProps) {
     const [formData, setFormData] = useState<CategoryFormData>({
         name: "",
@@ -83,6 +86,7 @@ export function CategoryForm({
                                 }
                                 className="col-span-3"
                                 required
+                                disabled={isLoading}
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -99,11 +103,15 @@ export function CategoryForm({
                                     })
                                 }
                                 className="col-span-3"
+                                disabled={isLoading}
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="submit">
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading && (
+                                <Spinner className="mr-2" size="sm" />
+                            )}
                             {mode === "create" ? "Create" : "Save"}
                         </Button>
                     </DialogFooter>
