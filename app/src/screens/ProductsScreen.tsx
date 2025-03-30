@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from "react-native";
-import { Searchbar, Card, Title, Paragraph, Button, Snackbar, Text } from "react-native-paper";
+import { Searchbar, Text, Snackbar } from "react-native-paper";
+import { Image } from 'expo-image';
 import { Product } from "../types";
 import { fetchProducts } from "../api/products";
 import { useUser } from "../contexts/UserContext";
@@ -38,11 +39,14 @@ export default function ProductsScreen() {
         }
     };
 
-    const filteredProducts = products.filter(
-        (product) =>
-            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.code.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredProducts = products.filter((product) => {
+        const searchLower = searchQuery.toLowerCase();
+        return (
+            product.name.toLowerCase().includes(searchLower) ||
+            product.code.toLowerCase().includes(searchLower) ||
+            product.description?.toLowerCase().includes(searchLower)
+        );
+    });
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -88,14 +92,23 @@ export default function ProductsScreen() {
             activeOpacity={0.7}
         >
             <View style={styles.productImageContainer}>
-                <View style={[
-                    styles.productImage, 
-                    { backgroundColor: getRandomColor(item.id) }
-                ]}>
-                    <Text style={styles.productInitial}>
-                        {item.name.charAt(0).toUpperCase()}
-                    </Text>
-                </View>
+                {item.imageUrl ? (
+                    <Image
+                        source={item.imageUrl}
+                        style={styles.productImage}
+                        contentFit="cover"
+                        transition={200}
+                    />
+                ) : (
+                    <View style={[
+                        styles.productImagePlaceholder, 
+                        { backgroundColor: getRandomColor(item.id) }
+                    ]}>
+                        <Text style={styles.productInitial}>
+                            {item.name.charAt(0).toUpperCase()}
+                        </Text>
+                    </View>
+                )}
                 {item.stock <= 0 && (
                     <View style={styles.outOfStockBadge}>
                         <Text style={styles.outOfStockText}>Out of Stock</Text>
@@ -110,6 +123,11 @@ export default function ProductsScreen() {
                 <Text style={styles.productCode} numberOfLines={1}>
                     {item.code}
                 </Text>
+                {item.description && (
+                    <Text style={styles.productDescription} numberOfLines={2}>
+                        {item.description}
+                    </Text>
+                )}
                 <View style={styles.productFooter}>
                     <View style={styles.productPriceRow}>
                         <Text style={styles.productPrice}>
@@ -140,14 +158,16 @@ export default function ProductsScreen() {
 
     return (
         <View style={styles.container}>
-            <Searchbar
-                placeholder="Search products"
-                onChangeText={setSearchQuery}
-                value={searchQuery}
-                style={styles.searchbar}
-                inputStyle={styles.searchInput}
-                iconColor={colors.primary}
-            />
+            <View style={styles.searchContainer}>
+                <Searchbar
+                    placeholder="Search by name, code, or description"
+                    onChangeText={setSearchQuery}
+                    value={searchQuery}
+                    style={styles.searchbar}
+                    inputStyle={styles.searchInput}
+                    iconColor={colors.primary}
+                />
+            </View>
             
             <FlatList
                 data={filteredProducts}
@@ -188,8 +208,14 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background,
     },
+    searchContainer: {
+        backgroundColor: colors.white,
+        paddingTop: spacing.md,
+        ...shadows.sm,
+    },
     searchbar: {
-        margin: spacing.md,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.md,
         borderRadius: 12,
         elevation: 2,
     },
@@ -213,6 +239,10 @@ const styles = StyleSheet.create({
         aspectRatio: 1,
     },
     productImage: {
+        width: '100%',
+        height: '100%',
+    },
+    productImagePlaceholder: {
         width: '100%',
         height: '100%',
         justifyContent: 'center',
@@ -247,6 +277,11 @@ const styles = StyleSheet.create({
         marginBottom: spacing.xs / 2,
     },
     productCode: {
+        fontSize: typography.fontSize.sm,
+        color: colors.textSecondary,
+        marginBottom: spacing.xs,
+    },
+    productDescription: {
         fontSize: typography.fontSize.sm,
         color: colors.textSecondary,
         marginBottom: spacing.sm,
