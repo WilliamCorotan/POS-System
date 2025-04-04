@@ -3,12 +3,12 @@
 import { useAuth } from "@clerk/nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Package,
-  QrCode,
-  Receipt,
-  Wallet,
-  PiggyBank,
-  AlertTriangle,
+    Package,
+    QrCode,
+    Receipt,
+    Wallet,
+    PiggyBank,
+    AlertTriangle,
 } from "lucide-react";
 import { AreaChart, BarChart } from "@tremor/react";
 import { useTransactions } from "@/hooks/use-transactions";
@@ -43,22 +43,26 @@ export default function DashboardPage() {
     const [dateRange, setDateRange] = useState<DateRange>("month");
 
     // Filter transactions based on date range
-    const filteredTransactions = useMemo(() => {
-        return filterTransactionsByDate(transactions, dateRange);
-    }, [transactions, dateRange]);
+    const filteredTransactions = filterTransactionsByDate(
+        transactions,
+        dateRange
+    );
 
     // Get expired products
-    const expiredProducts = useMemo(() => {
-        return products.filter(product => {
+    const expiredProducts = products
+        .filter((product) => {
             if (!product.expirationDate) return false;
             const expirationDate = new Date(product.expirationDate);
             return expirationDate < new Date();
-        }).sort((a, b) => {
+        })
+        .sort((a, b) => {
             // Sort by expiration date (most recently expired first)
             if (!a.expirationDate || !b.expirationDate) return 0;
-            return new Date(b.expirationDate).getTime() - new Date(a.expirationDate).getTime();
+            return (
+                new Date(b.expirationDate).getTime() -
+                new Date(a.expirationDate).getTime()
+            );
         });
-    }, [products]);
 
     // Calculate monthly data for the area chart
     const monthlyData = useMemo(() => {
@@ -70,9 +74,11 @@ export default function DashboardPage() {
             ).padStart(2, "0")}`;
 
             // Calculate net amount after refunds
-            const netAmount = transaction.totalPrice - (transaction.totalRefund || 0);
-            
-            monthlyTotals[monthYear] = (monthlyTotals[monthYear] || 0) + netAmount;
+            const netAmount =
+                transaction.totalPrice - (transaction.totalRefund || 0);
+
+            monthlyTotals[monthYear] =
+                (monthlyTotals[monthYear] || 0) + netAmount;
         });
 
         return Object.entries(monthlyTotals)
@@ -89,7 +95,8 @@ export default function DashboardPage() {
         filteredTransactions.forEach((transaction) => {
             const year = new Date(transaction.dateOfTransaction).getFullYear();
             // Calculate net amount after refunds
-            const netAmount = transaction.totalPrice - (transaction.totalRefund || 0);
+            const netAmount =
+                transaction.totalPrice - (transaction.totalRefund || 0);
             yearlyTotals[year] = (yearlyTotals[year] || 0) + netAmount;
         });
 
@@ -105,24 +112,27 @@ export default function DashboardPage() {
     const metrics = useMemo(() => {
         // Calculate total sales (excluding refunds)
         const totalSales = filteredTransactions.reduce(
-            (sum, transaction) => sum + (transaction.totalPrice - (transaction.totalRefund || 0)),
+            (sum, transaction) =>
+                sum + (transaction.totalPrice - (transaction.totalRefund || 0)),
             0
         );
 
         // Calculate total cost from items (excluding refunded items)
         const totalCost = filteredTransactions.reduce((sum, transaction) => {
             try {
-                const items = JSON.parse(transaction.items || "[]") as TransactionItem[];
+                const items = JSON.parse(
+                    transaction.items || "[]"
+                ) as TransactionItem[];
                 const refundedAmount = transaction.totalRefund || 0;
-                const refundRatio = refundedAmount > 0 ? refundedAmount / transaction.totalPrice : 0;
-                
+
                 // Adjust cost based on refund ratio
                 const itemsCost = items.reduce(
-                    (itemSum, item) => itemSum + item.quantity * (item.productBuyPrice || 0),
+                    (itemSum, item) =>
+                        itemSum + item.quantity * (item.productBuyPrice || 0),
                     0
                 );
-                
-                return sum + (itemsCost * (1 - refundRatio));
+
+                return sum + itemsCost - refundedAmount;
             } catch (error) {
                 console.error("Error parsing transaction items:", error);
                 return sum;
@@ -135,8 +145,9 @@ export default function DashboardPage() {
             totalSales > 0 ? (margin / totalSales) * 100 : 0;
 
         // Count only non-refunded transactions
-        const totalTransactions = filteredTransactions.filter(t => 
-            t.status !== "refunded" && t.totalPrice > (t.totalRefund || 0)
+        const totalTransactions = filteredTransactions.filter(
+            (t) =>
+                t.status !== "refunded" && t.totalPrice > (t.totalRefund || 0)
         ).length;
 
         return {
@@ -150,27 +161,36 @@ export default function DashboardPage() {
 
     // Extract and aggregate items sold
     const itemsSold = useMemo(() => {
-        const itemMap = new Map<number, {
-            id: number;
-            name: string;
-            quantity: number;
-            totalSales: number;
-            buyPrice: number;
-            sellPrice: number;
-            profit: number;
-        }>();
+        const itemMap = new Map<
+            number,
+            {
+                id: number;
+                name: string;
+                quantity: number;
+                totalSales: number;
+                buyPrice: number;
+                sellPrice: number;
+                profit: number;
+            }
+        >();
 
-        filteredTransactions.forEach(transaction => {
+        filteredTransactions.forEach((transaction) => {
             try {
-                const items = JSON.parse(transaction.items || "[]") as TransactionItem[];
-                const refundRatio = transaction.totalRefund ? transaction.totalRefund / transaction.totalPrice : 0;
-                
-                items.forEach(item => {
+                const items = JSON.parse(
+                    transaction.items || "[]"
+                ) as TransactionItem[];
+                const refundRatio = transaction.totalRefund
+                    ? transaction.totalRefund / transaction.totalPrice
+                    : 0;
+
+                items.forEach((item) => {
                     // Adjust quantities and amounts based on refund ratio
                     const adjustedQuantity = item.quantity * (1 - refundRatio);
-                    const adjustedSales = adjustedQuantity * item.productSellPrice;
-                    const adjustedCost = adjustedQuantity * item.productBuyPrice;
-                    
+                    const adjustedSales =
+                        adjustedQuantity * item.productSellPrice;
+                    const adjustedCost =
+                        adjustedQuantity * item.productBuyPrice;
+
                     const existing = itemMap.get(item.productId);
                     if (existing) {
                         existing.quantity += adjustedQuantity;
@@ -184,7 +204,7 @@ export default function DashboardPage() {
                             totalSales: adjustedSales,
                             buyPrice: item.productBuyPrice,
                             sellPrice: item.productSellPrice,
-                            profit: adjustedSales - adjustedCost
+                            profit: adjustedSales - adjustedCost,
                         });
                     }
                 });
@@ -193,20 +213,28 @@ export default function DashboardPage() {
             }
         });
 
-        return Array.from(itemMap.values())
-            .sort((a, b) => b.totalSales - a.totalSales);
+        return Array.from(itemMap.values()).sort(
+            (a, b) => b.totalSales - a.totalSales
+        );
     }, [filteredTransactions]);
 
     // Get date range label for display
     const dateRangeLabel = useMemo(() => {
         switch (dateRange) {
-            case "daily": return "Today";
-            case "yesterday": return "Yesterday";
-            case "week": return "Last Week";
-            case "month": return "Last Month";
-            case "3months": return "Last 3 Months";
-            case "annual": return "Annual";
-            default: return "Selected Period";
+            case "daily":
+                return "Today";
+            case "yesterday":
+                return "Yesterday";
+            case "week":
+                return "Last Week";
+            case "month":
+                return "Last Month";
+            case "3months":
+                return "Last 3 Months";
+            case "annual":
+                return "Annual";
+            default:
+                return "Selected Period";
         }
     }, [dateRange]);
 
@@ -221,7 +249,9 @@ export default function DashboardPage() {
                 <div className="flex gap-4">
                     <Select
                         value={dateRange}
-                        onValueChange={(value: DateRange) => setDateRange(value)}
+                        onValueChange={(value: DateRange) =>
+                            setDateRange(value)
+                        }
                     >
                         <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Select date range" />
@@ -231,7 +261,9 @@ export default function DashboardPage() {
                             <SelectItem value="yesterday">Yesterday</SelectItem>
                             <SelectItem value="week">Last Week</SelectItem>
                             <SelectItem value="month">Last Month</SelectItem>
-                            <SelectItem value="3months">Last 3 Months</SelectItem>
+                            <SelectItem value="3months">
+                                Last 3 Months
+                            </SelectItem>
                             <SelectItem value="annual">Annual</SelectItem>
                         </SelectContent>
                     </Select>
@@ -310,8 +342,7 @@ export default function DashboardPage() {
                             PHP{metrics.margin.toFixed(2)}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            {metrics.marginPercentage.toFixed(1)}%
-                            margin
+                            {metrics.marginPercentage.toFixed(1)}% margin
                         </p>
                     </CardContent>
                 </Card>
@@ -325,7 +356,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {itemsSold.reduce((sum, item) => sum + item.quantity, 0)}
+                            {itemsSold.length}
                         </div>
                         <p className="text-xs text-muted-foreground">
                             {dateRangeLabel}
@@ -423,20 +454,38 @@ export default function DashboardPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {expiredProducts.map((product) => {
-                                        const expirationDate = new Date(product.expirationDate!);
+                                        const expirationDate = new Date(
+                                            product.expirationDate!
+                                        );
                                         const today = new Date();
-                                        const daysExpired = Math.floor((today.getTime() - expirationDate.getTime()) / (1000 * 60 * 60 * 24));
-                                        
+                                        const daysExpired = Math.floor(
+                                            (today.getTime() -
+                                                expirationDate.getTime()) /
+                                                (1000 * 60 * 60 * 24)
+                                        );
+
                                         return (
                                             <TableRow key={product.id}>
-                                                <TableCell>{product.code}</TableCell>
-                                                <TableCell className="font-medium">{product.name}</TableCell>
-                                                <TableCell>{product.stock}</TableCell>
-                                                <TableCell className="text-red-500">
-                                                    {format(expirationDate, 'MMM dd, yyyy')}
+                                                <TableCell>
+                                                    {product.code}
+                                                </TableCell>
+                                                <TableCell className="font-medium">
+                                                    {product.name}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {product.stock}
                                                 </TableCell>
                                                 <TableCell className="text-red-500">
-                                                    {daysExpired} {daysExpired === 1 ? 'day' : 'days'}
+                                                    {format(
+                                                        expirationDate,
+                                                        "MMM dd, yyyy"
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-red-500">
+                                                    {daysExpired}{" "}
+                                                    {daysExpired === 1
+                                                        ? "day"
+                                                        : "days"}
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -459,26 +508,47 @@ export default function DashboardPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Product</TableHead>
-                                    <TableHead className="text-right">Quantity</TableHead>
-                                    <TableHead className="text-right">Unit Price</TableHead>
-                                    <TableHead className="text-right">Total Sales</TableHead>
-                                    <TableHead className="text-right">Profit</TableHead>
+                                    <TableHead className="text-right">
+                                        Quantity
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        Unit Price
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        Total Sales
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        Profit
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {itemsSold.length > 0 ? (
                                     itemsSold.map((item) => (
                                         <TableRow key={item.id}>
-                                            <TableCell className="font-medium">{item.name}</TableCell>
-                                            <TableCell className="text-right">{item.quantity.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">PHP {item.sellPrice.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">PHP {item.totalSales.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">PHP {item.profit.toFixed(2)}</TableCell>
+                                            <TableCell className="font-medium">
+                                                {item.name}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {item.quantity.toFixed(2)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                PHP {item.sellPrice.toFixed(2)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                PHP {item.totalSales.toFixed(2)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                PHP {item.profit.toFixed(2)}
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-4">
+                                        <TableCell
+                                            colSpan={5}
+                                            className="text-center py-4"
+                                        >
                                             No items sold during this period
                                         </TableCell>
                                     </TableRow>

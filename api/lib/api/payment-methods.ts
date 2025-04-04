@@ -28,13 +28,17 @@ export async function updatePaymentMethod(
 
 export async function deletePaymentMethod(id: number, userId: string) {
     const date = new Date();
-    const dateDeleted = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-    ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(
-        date.getHours()
-    ).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(
-        date.getSeconds()
-    ).padStart(2, "0")}`;
+    const phDate = new Date(
+        date.toLocaleString("en-US", { timeZone: "Asia/Manila" })
+    );
+    const dateDeleted = `${phDate.getFullYear()}-${String(
+        phDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(phDate.getDate()).padStart(2, "0")} ${String(
+        phDate.getHours()
+    ).padStart(2, "0")}:${String(phDate.getMinutes()).padStart(
+        2,
+        "0"
+    )}:${String(phDate.getSeconds()).padStart(2, "0")}`;
 
     return db
         .update(payments)

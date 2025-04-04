@@ -18,6 +18,7 @@ import { useTransactions } from "@/hooks/use-transactions";
 import { ExportType } from "@/lib/export/types";
 import { filterTransactionsByDate } from "@/lib/export/date-filters";
 import { useMemo } from "react";
+import { TransactionItem } from "@/types";
 
 export default function TransactionsPage() {
     const { userId } = useAuth();
@@ -28,9 +29,10 @@ export default function TransactionsPage() {
     const [isExporting, setIsExporting] = useState(false);
 
     // Filter transactions based on selected date range
-    const filteredTransactions = useMemo(() => {
-        return filterTransactionsByDate(transactions, dateRange);
-    }, [transactions, dateRange]);
+    const filteredTransactions = filterTransactionsByDate(
+        transactions,
+        dateRange
+    );
 
     // Get date range label for display
     const dateRangeLabel = useMemo(() => {
@@ -51,6 +53,61 @@ export default function TransactionsPage() {
                 return "Selected Period";
         }
     }, [dateRange]);
+
+    // Calculate metrics based on filtered transactions
+    const metrics = useMemo(() => {
+        // Calculate total sales (excluding refunds)
+        const totalSales = filteredTransactions.reduce(
+            (sum, transaction) =>
+                sum + (transaction.totalPrice - (transaction.totalRefund || 0)),
+            0
+        );
+
+        // Calculate total cost from items (excluding refunded items)
+        const totalCost = filteredTransactions.reduce((sum, transaction) => {
+            try {
+                const items = JSON.parse(
+                    transaction.items || "[]"
+                ) as TransactionItem[];
+                const refundedAmount = transaction.totalRefund || 0;
+                const refundRatio =
+                    refundedAmount > 0
+                        ? refundedAmount / transaction.totalPrice
+                        : 0;
+
+                // Adjust cost based on refund ratio
+                const itemsCost = items.reduce(
+                    (itemSum, item) =>
+                        itemSum + item.quantity * (item.productBuyPrice || 0),
+                    0
+                );
+
+                return sum + itemsCost * (1 - refundRatio);
+            } catch (error) {
+                console.error("Error parsing transaction items:", error);
+                return sum;
+            }
+        }, 0);
+
+        // Calculate margin
+        const margin = totalSales - totalCost;
+        const marginPercentage =
+            totalSales > 0 ? (margin / totalSales) * 100 : 0;
+
+        // Count only non-refunded transactions
+        const totalTransactions = filteredTransactions.filter(
+            (t) =>
+                t.status !== "refunded" && t.totalPrice > (t.totalRefund || 0)
+        ).length;
+
+        return {
+            totalSales,
+            totalCost,
+            margin,
+            marginPercentage,
+            totalTransactions,
+        };
+    }, [filteredTransactions]);
 
     const handleExport = async () => {
         try {
@@ -142,27 +199,7 @@ export default function TransactionsPage() {
                             Total Revenue
                         </p>
                         <p className="text-2xl font-bold">
-                            PHP{" "}
-                            {filteredTransactions
-                                .filter((t) => t.status === "completed")
-                                .reduce((sum, t) => sum + t.totalPrice, 0)
-                                .toFixed(2)}
-                        </p>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <p className="text-sm text-muted-foreground">
-                            Average Transaction
-                        </p>
-                        <p className="text-2xl font-bold">
-                            PHP{" "}
-                            {filteredTransactions.length > 0
-                                ? (
-                                      filteredTransactions.reduce(
-                                          (sum, t) => sum + t.totalPrice,
-                                          0
-                                      ) / filteredTransactions.length
-                                  ).toFixed(2)
-                                : "0.00"}
+                            PHP{metrics.totalSales.toFixed(2)}
                         </p>
                     </div>
                 </div>

@@ -25,6 +25,7 @@ export type Product = {
     name: string;
     code: string;
     description?: string;
+    brand?: string;
     image?: string;
     imageUrl?: string;
     buyPrice: number;
@@ -33,6 +34,7 @@ export type Product = {
     lowStockLevel?: number;
     expirationDate?: string;
     unitMeasurementsId?: number;
+    unitMeasurement?: string;
     categoryId?: number;
     clerkId: string;
 };
@@ -41,7 +43,9 @@ export type Category = {
     id: number;
     name: string;
     description?: string;
+    parentId?: number;
     clerkId: string;
+    subcategories?: Category[];
 };
 
 export type Order = {
@@ -86,6 +90,7 @@ export type ProductFormData = {
     name: string;
     code: string;
     description?: string;
+    brand?: string;
     image?: string;
     imageUrl?: string;
     buyPrice: number;
@@ -94,6 +99,7 @@ export type ProductFormData = {
     lowStockLevel?: number;
     expirationDate?: string;
     unitMeasurementsId?: number;
+    unitMeasurement?: string;
     categoryId?: number;
     clerkId?: string;
 };

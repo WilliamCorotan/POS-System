@@ -22,7 +22,7 @@ import {
     Search,
     Eye,
 } from "lucide-react";
-import { Product, ProductFormData } from "@/types";
+import { Product, ProductFormData, Category } from "@/types";
 import { ProductSummary } from "./ProductSummary";
 import { useCategories } from "@/hooks/use-categories";
 import Image from "next/image";
@@ -62,9 +62,27 @@ export default function ProductList({ options }: ProductListProps) {
     );
     const [mode, setMode] = useState<"create" | "edit">("create");
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState<string>("all");
+    const [selectedParentCategory, setSelectedParentCategory] =
+        useState<string>("all");
+    const [selectedSubcategory, setSelectedSubcategory] =
+        useState<string>("all");
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
+
+    // Organize categories into a hierarchy
+    const organizeCategories = (categories: Category[]) => {
+        const parentCategories = categories.filter((cat) => !cat.parentId);
+        const getSubcategories = (parentId: number) =>
+            categories.filter((cat) => cat.parentId === parentId);
+        return { parentCategories, getSubcategories };
+    };
+
+    const { parentCategories, getSubcategories } =
+        organizeCategories(categories);
+    const subcategories =
+        selectedParentCategory !== "all"
+            ? getSubcategories(parseInt(selectedParentCategory))
+            : [];
 
     const handleCreate = () => {
         setMode("create");
@@ -110,9 +128,10 @@ export default function ProductList({ options }: ProductListProps) {
             const processedData = {
                 ...data,
                 description: data.description || undefined,
+                image: data.image || undefined,
                 imageUrl: data.imageUrl || undefined,
                 expirationDate: data.expirationDate || undefined,
-                unitMeasurementsId: data.unitMeasurementsId ?? 0,
+                unitMeasurementsId: data.unitMeasurementsId || undefined,
                 categoryId: data.categoryId,
                 clerkId: data.clerkId || "",
                 buyPrice: parseFloat(data.buyPrice.toString()),
@@ -185,6 +204,7 @@ export default function ProductList({ options }: ProductListProps) {
             if (!response.ok)
                 throw new Error("Failed to export restock history");
 
+            window.location.href = "/api/products/restock/export";
             const data = await response.json();
             if (data.success) {
                 console.log("Restock history exported successfully");
@@ -208,19 +228,26 @@ export default function ProductList({ options }: ProductListProps) {
         return category ? category.name : "Uncategorized";
     };
 
-    // Filter products based on search term and category
+    // Filter products based on search term and category selections
     const filteredProducts = products.filter((product) => {
         const matchesSearch =
             searchTerm === "" ||
             product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.code.toLowerCase().includes(searchTerm.toLowerCase());
+            product.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            product.brand?.toLowerCase().includes(searchTerm.toLowerCase());
 
+        const category = categories.find((c) => c.id === product.categoryId);
         const matchesCategory =
-            selectedCategory === "all" ||
-            (selectedCategory === "uncategorized" && !product.categoryId) ||
-            product.categoryId?.toString() === selectedCategory;
+            selectedParentCategory === "all" ||
+            (category?.parentId
+                ? category.parentId.toString() === selectedParentCategory
+                : category?.id.toString() === selectedParentCategory);
 
-        return matchesSearch && matchesCategory;
+        const matchesSubcategory =
+            selectedSubcategory === "all" ||
+            product.categoryId?.toString() === selectedSubcategory;
+
+        return matchesSearch && matchesCategory && matchesSubcategory;
     });
 
     if (error) {
@@ -236,25 +263,25 @@ export default function ProductList({ options }: ProductListProps) {
                     <div className="relative flex-1">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search products..."
+                            placeholder="Search by name, code, or brand..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-8"
                         />
                     </div>
                     <Select
-                        value={selectedCategory}
-                        onValueChange={setSelectedCategory}
+                        value={selectedParentCategory}
+                        onValueChange={(value) => {
+                            setSelectedParentCategory(value);
+                            setSelectedSubcategory("all");
+                        }}
                     >
                         <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Categories</SelectItem>
-                            <SelectItem value="uncategorized">
-                                Uncategorized
-                            </SelectItem>
-                            {categories.map((category) => (
+                            {parentCategories.map((category) => (
                                 <SelectItem
                                     key={category.id}
                                     value={category.id.toString()}
@@ -264,6 +291,30 @@ export default function ProductList({ options }: ProductListProps) {
                             ))}
                         </SelectContent>
                     </Select>
+
+                    {subcategories.length > 0 && (
+                        <Select
+                            value={selectedSubcategory}
+                            onValueChange={setSelectedSubcategory}
+                        >
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select subcategory" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">
+                                    All Subcategories
+                                </SelectItem>
+                                {subcategories.map((category) => (
+                                    <SelectItem
+                                        key={category.id}
+                                        value={category.id.toString()}
+                                    >
+                                        {category.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
                 </div>
 
                 <div
@@ -293,6 +344,7 @@ export default function ProductList({ options }: ProductListProps) {
                             <TableHead>Image</TableHead>
                             <TableHead>Code</TableHead>
                             <TableHead>Name</TableHead>
+                            <TableHead>Brand</TableHead>
                             <TableHead>Category</TableHead>
                             <TableHead>Stock</TableHead>
                             <TableHead>Buy Price</TableHead>
@@ -306,11 +358,11 @@ export default function ProductList({ options }: ProductListProps) {
                     </TableHeader>
                     <TableBody>
                         {loading || isActionLoading ? (
-                            <TableLoading columns={10} />
+                            <TableLoading columns={11} />
                         ) : filteredProducts.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={10}
+                                    colSpan={11}
                                     className="text-center py-4"
                                 >
                                     No products found
@@ -337,6 +389,9 @@ export default function ProductList({ options }: ProductListProps) {
                                     </TableCell>
                                     <TableCell>{product.code}</TableCell>
                                     <TableCell>{product.name}</TableCell>
+                                    <TableCell>
+                                        {product.brand || "-"}
+                                    </TableCell>
                                     <TableCell>
                                         {getCategoryName(product.categoryId)}
                                     </TableCell>

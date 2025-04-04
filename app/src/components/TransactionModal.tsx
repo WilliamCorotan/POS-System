@@ -107,11 +107,11 @@ export function TransactionModal({
                   </>
                 )}
 
-                {transaction.totalCost > 0 && (
+                {transaction.totalPrice > 0 && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Total Cost</Text>
+                    <Text style={styles.detailLabel}>Total Price</Text>
                     <Text style={styles.detailValue}>
-                      PHP {transaction.totalCost.toFixed(2)}
+                      PHP {transaction.totalPrice.toFixed(2) - transaction.totalRefund.toFixed(2)}
                     </Text>
                   </View>
                 )}
@@ -190,7 +190,7 @@ export function TransactionModal({
               title="Close"
               variant="primary"
               onPress={onDismiss}
-              fullWidth
+              style={styles.closeCtaButton}
             />
           </View>
         </View>
@@ -335,6 +335,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   refundButton: {
+    borderColor: colors.error,
+  },
+  closeCtaButton: {
     flex: 1,
     borderColor: colors.error,
   },

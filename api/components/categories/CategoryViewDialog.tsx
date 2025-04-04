@@ -1,5 +1,6 @@
 import { Category } from "@/types";
 import { ViewDialog, ViewField } from "@/components/ui/view-dialog";
+import { useCategories } from "@/hooks/use-categories";
 
 interface CategoryViewDialogProps {
     open: boolean;
@@ -12,6 +13,15 @@ export function CategoryViewDialog({
     onOpenChange,
     category,
 }: CategoryViewDialogProps) {
+    const { categories } = useCategories();
+
+    const getParentCategory = (parentId?: number) => {
+        if (!parentId) return null;
+        return categories.find((cat) => cat.id === parentId);
+    };
+
+    const parentCategory = getParentCategory(category.parentId);
+
     return (
         <ViewDialog
             open={open}
@@ -22,6 +32,10 @@ export function CategoryViewDialog({
             <div className="grid gap-4">
                 <ViewField label="Name" value={category.name} />
                 <ViewField label="Description" value={category.description} />
+                <ViewField
+                    label="Parent Category"
+                    value={parentCategory ? parentCategory.name : "None"}
+                />
             </div>
         </ViewDialog>
     );

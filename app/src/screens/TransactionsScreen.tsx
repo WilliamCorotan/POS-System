@@ -100,7 +100,7 @@ export default function TransactionsScreen() {
                     <View style={styles.totalContainer}>
                         <Text style={styles.totalLabel}>Total:</Text>
                         <Text style={styles.totalAmount}>
-                            PHP {Number(item.totalPrice).toFixed(2)}
+                            PHP {Number(item.totalPrice).toFixed(2) - Number(item.totalRefund).toFixed(2)}
                         </Text>
                     </View>
                 </View>

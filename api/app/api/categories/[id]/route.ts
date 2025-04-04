@@ -16,7 +16,7 @@ export async function PUT(request: Request, { params }: { params: any }) {
             userId
         );
 
-        if (!updatedCategory.length) {
+        if (!updatedCategory || !Array.isArray(updatedCategory)) {
             return NextResponse.json(
                 { error: "Category not found or unauthorized" },
                 { status: 404 }

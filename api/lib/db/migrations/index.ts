@@ -9,6 +9,9 @@ import { addRefundTables } from "./07-add-refund-tables";
 import { addReferenceNumberToTransactions } from "./08-add-reference-number";
 import { addRestockTable } from "./09-add-restock-table";
 import { addImageUrlToProducts } from "./10.add-image-url-column";
+import { addUnitMeasurementString } from "./11-add-unit-measurement-string";
+import { addCategoryParentId } from "./12-add-category-parent-id";
+import { addBrandToProducts } from "./13-add-brand-to-products";
 
 export async function runMigrations() {
     try {
@@ -46,6 +49,15 @@ export async function runMigrations() {
 
         await addImageUrlToProducts();
         console.log("✓ Added image_url to products table");
+
+        await addUnitMeasurementString();
+        console.log("✓ Added unit_measurement string to products table");
+
+        await addCategoryParentId();
+        console.log("✓ Added parent_id to categories table");
+
+        await addBrandToProducts();
+        console.log("✓ Added brand to products table");
 
         console.log("All migrations completed successfully");
     } catch (error) {

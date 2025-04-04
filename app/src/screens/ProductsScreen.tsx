@@ -20,7 +20,7 @@ export default function ProductsScreen() {
     const [errorMessage, setErrorMessage] = useState("");
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
-    const { addToCart } = useCart();
+    const { addToCart, updateQuantity, items: cartItems } = useCart();
 
     useEffect(() => {
         loadProducts();
@@ -67,6 +67,25 @@ export default function ProductsScreen() {
                 setErrorMessage(error.message);
             } else {
                 setErrorMessage("Failed to add product to cart");
+            }
+            setSnackBarVisible(true);
+        }
+    };
+
+    const handleRemoveFromCart = (product: Product) => {
+        try {
+            const cartItem = cartItems.find((item) => item.product_id === product.id);
+            if (!cartItem || cartItem.quantity <= 0) {
+                throw new Error("Product not in cart");
+            }
+            updateQuantity(cartItem.id, cartItem.quantity - 1);
+            setErrorMessage("Product removed from cart");
+            setSnackBarVisible(true);
+        } catch (error) {
+            if (error instanceof Error) {
+                setErrorMessage(error.message);
+            } else {
+                setErrorMessage("Failed to remove product from cart");
             }
             setSnackBarVisible(true);
         }
@@ -137,6 +156,23 @@ export default function ProductsScreen() {
                             Stock: {item.stock}
                         </Text>
                     </View>
+                    <View style={styles.productPriceRow}>
+                    <TouchableOpacity 
+                        style={[
+                            styles.removeButton,
+                            cartItems.filter((cartItem) => cartItem.product_id === item.id).length <= 0 && styles.disabledButton
+                        ]}
+                        onPress={() => handleRemoveFromCart(item)}
+                        disabled={cartItems.filter((cartItem) => cartItem.product_id === item.id).length <= 0 }
+                    >
+                        <Ionicons 
+                            name="remove" 
+                            size={24} 
+                            color={item.stock <= 0 ? colors.gray400 : colors.white} 
+                        />
+                    </TouchableOpacity>
+                    {console.log(cartItems.filter((cartItem) => cartItem.product_id === item.id))}
+                    <Text>{cartItems.filter((cartItem) => cartItem.product_id === item.id)?.[0]?.quantity || 0}</Text>
                     <TouchableOpacity 
                         style={[
                             styles.addButton,
@@ -151,6 +187,8 @@ export default function ProductsScreen() {
                             color={item.stock <= 0 ? colors.gray400 : colors.white} 
                         />
                     </TouchableOpacity>
+
+                    </View>
                 </View>
             </View>
         </TouchableOpacity>
@@ -306,7 +344,16 @@ const styles = StyleSheet.create({
     },
     addButton: {
         backgroundColor: colors.primary,
-        width: '100%',
+        width: '40%',
+        height: 36,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.sm,
+    },
+    removeButton: {
+        backgroundColor: colors.primary,
+        width: '40%',
         height: 36,
         borderRadius: 8,
         justifyContent: 'center',

@@ -42,6 +42,7 @@ const defaultFormData: ProductFormData = {
     lowStockLevel: 0,
     expirationDate: "",
     categoryId: 0,
+    unitMeasurement: "",
     image: "",
 };
 
@@ -56,9 +57,26 @@ export function ProductForm({
     const [formData, setFormData] = useState<ProductFormData>(defaultFormData);
     const [uploading, setUploading] = useState(false);
     const { categories } = useCategories();
+    const [selectedParentCategory, setSelectedParentCategory] =
+        useState<string>("none");
+
+    const parentCategories = categories.filter((cat) => !cat.parentId);
+    const getSubcategories = (parentId: number) =>
+        categories.filter((cat) => cat.parentId === parentId);
 
     useEffect(() => {
         if (initialData) {
+            const category = categories.find(
+                (c) => c.id === initialData.categoryId
+            );
+            if (category) {
+                if (category.parentId) {
+                    setSelectedParentCategory(category.parentId.toString());
+                } else {
+                    setSelectedParentCategory(category.id.toString());
+                }
+            }
+
             setFormData({
                 name: initialData.name,
                 code: initialData.code,
@@ -69,16 +87,22 @@ export function ProductForm({
                 lowStockLevel: initialData.lowStockLevel || 0,
                 expirationDate: initialData.expirationDate || "",
                 categoryId: initialData.categoryId || 0,
+                unitMeasurement: initialData.unitMeasurement || "",
                 imageUrl: initialData.imageUrl || "",
             });
         } else {
             setFormData(defaultFormData);
+            setSelectedParentCategory("none");
         }
-    }, [initialData]);
+    }, [initialData, open, categories]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(formData);
+        await onSubmit(formData);
+        if (mode === "create") {
+            setFormData(defaultFormData);
+            setSelectedParentCategory("none");
+        }
     };
 
     const handleImageUpload = async (
@@ -113,6 +137,11 @@ export function ProductForm({
     const removeImage = () => {
         setFormData((prev) => ({ ...prev, imageUrl: "" }));
     };
+
+    const subcategories =
+        selectedParentCategory !== "none"
+            ? getSubcategories(parseInt(selectedParentCategory))
+            : [];
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -163,6 +192,115 @@ export function ProductForm({
                         </div>
 
                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="category" className="text-right">
+                                Category
+                            </Label>
+                            <div className="col-span-3">
+                                <Select
+                                    value={selectedParentCategory}
+                                    onValueChange={(value) => {
+                                        setSelectedParentCategory(value);
+                                        // If selecting a parent category with no subcategories,
+                                        // set it as the category
+                                        const hasSubcategories =
+                                            getSubcategories(parseInt(value))
+                                                .length > 0;
+                                        if (
+                                            !hasSubcategories &&
+                                            value !== "none"
+                                        ) {
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                categoryId: parseInt(value),
+                                            }));
+                                        } else {
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                categoryId: 0,
+                                            }));
+                                        }
+                                    }}
+                                    required
+                                    disabled={isLoading}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">
+                                            Select Category
+                                        </SelectItem>
+                                        {parentCategories.map((category) => (
+                                            <SelectItem
+                                                key={category.id}
+                                                value={category.id.toString()}
+                                            >
+                                                {category.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {subcategories.length > 0 && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label
+                                    htmlFor="subcategory"
+                                    className="text-right"
+                                >
+                                    Subcategory
+                                </Label>
+                                <div className="col-span-3">
+                                    <Select
+                                        value={formData.categoryId?.toString()}
+                                        onValueChange={(value) =>
+                                            setFormData({
+                                                ...formData,
+                                                categoryId: parseInt(value),
+                                            })
+                                        }
+                                        required
+                                        disabled={isLoading}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a subcategory" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {subcategories.map((category) => (
+                                                <SelectItem
+                                                    key={category.id}
+                                                    value={category.id.toString()}
+                                                >
+                                                    {category.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="brand" className="text-right">
+                                Brand
+                            </Label>
+                            <Input
+                                id="brand"
+                                value={formData.brand || ""}
+                                onChange={(e) =>
+                                    setFormData({
+                                        ...formData,
+                                        brand: e.target.value,
+                                    })
+                                }
+                                className="col-span-3"
+                                placeholder="Enter brand name"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">
                                 Name
                             </Label>
@@ -194,42 +332,10 @@ export function ProductForm({
                                     })
                                 }
                                 className="col-span-3"
-                                required
                                 disabled={isLoading}
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="category" className="text-right">
-                                Category
-                            </Label>
-                            <div className="col-span-3">
-                                <Select
-                                    value={formData.categoryId?.toString()}
-                                    onValueChange={(value) =>
-                                        setFormData({
-                                            ...formData,
-                                            categoryId: parseInt(value),
-                                        })
-                                    }
-                                    required
-                                    disabled={isLoading}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map((category) => (
-                                            <SelectItem
-                                                key={category.id}
-                                                value={category.id.toString()}
-                                            >
-                                                {category.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
+
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="description" className="text-right">
                                 Description
@@ -244,6 +350,27 @@ export function ProductForm({
                                     })
                                 }
                                 className="col-span-3"
+                                disabled={isLoading}
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label
+                                htmlFor="unitMeasurement"
+                                className="text-right"
+                            >
+                                Unit
+                            </Label>
+                            <Input
+                                id="unitMeasurement"
+                                value={formData.unitMeasurement}
+                                onChange={(e) =>
+                                    setFormData({
+                                        ...formData,
+                                        unitMeasurement: e.target.value,
+                                    })
+                                }
+                                className="col-span-3"
+                                placeholder="e.g., kg, pcs, box"
                                 disabled={isLoading}
                             />
                         </div>

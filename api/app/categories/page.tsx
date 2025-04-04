@@ -16,7 +16,7 @@ import { CategoryForm } from "@/components/categories/CategoryForm";
 import { CategoryViewDialog } from "@/components/categories/CategoryViewDialog";
 import { useCategories } from "@/hooks/use-categories";
 import { Category } from "@/types";
-import { Pencil, Trash2, Eye } from "lucide-react";
+import { Pencil, Trash2, Eye, ChevronRight, ChevronDown } from "lucide-react";
 
 export default function CategoriesPage() {
     const { userId } = useAuth();
@@ -29,6 +29,7 @@ export default function CategoriesPage() {
         null
     );
     const [isActionLoading, setIsActionLoading] = useState(false);
+    const [expandedCategories, setExpandedCategories] = useState<number[]>([]);
 
     const handleCreate = () => {
         setEditingCategory(null);
@@ -61,6 +62,111 @@ export default function CategoriesPage() {
         }
     };
 
+    const toggleExpand = (categoryId: number) => {
+        setExpandedCategories((prev) =>
+            prev.includes(categoryId)
+                ? prev.filter((id) => id !== categoryId)
+                : [...prev, categoryId]
+        );
+    };
+
+    // Organize categories into a hierarchy
+    const organizeCategories = (categories: Category[]): Category[] => {
+        const categoryMap = new Map<number, Category>();
+        const rootCategories: Category[] = [];
+
+        // First pass: Create a map of all categories
+        categories.forEach((category) => {
+            categoryMap.set(category.id, { ...category, subcategories: [] });
+        });
+
+        // Second pass: Organize into hierarchy
+        categories.forEach((category) => {
+            const currentCategory = categoryMap.get(category.id)!;
+            if (category.parentId) {
+                const parentCategory = categoryMap.get(category.parentId);
+                if (parentCategory) {
+                    parentCategory.subcategories =
+                        parentCategory.subcategories || [];
+                    parentCategory.subcategories.push(currentCategory);
+                }
+            } else {
+                rootCategories.push(currentCategory);
+            }
+        });
+
+        return rootCategories;
+    };
+
+    const renderCategoryRow = (category: Category, level: number = 0) => {
+        const isExpanded = expandedCategories.includes(category.id);
+        const hasSubcategories =
+            category.subcategories && category.subcategories.length > 0;
+
+        return (
+            <>
+                <TableRow key={category.id}>
+                    <TableCell>
+                        <div
+                            className="flex items-center"
+                            style={{ paddingLeft: `${level * 24}px` }}
+                        >
+                            {hasSubcategories && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => toggleExpand(category.id)}
+                                >
+                                    {isExpanded ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                        <ChevronRight className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            )}
+                            {!hasSubcategories && <div className="w-6" />}
+                            {category.name}
+                        </div>
+                    </TableCell>
+                    <TableCell>{category.description}</TableCell>
+                    <TableCell>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleView(category)}
+                                disabled={isActionLoading}
+                            >
+                                <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(category)}
+                                disabled={isActionLoading}
+                            >
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(category.id)}
+                                disabled={isActionLoading}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </TableCell>
+                </TableRow>
+                {isExpanded &&
+                    category.subcategories?.map((subcategory: any): any =>
+                        renderCategoryRow(subcategory, level + 1)
+                    )}
+            </>
+        );
+    };
+
     if (!userId) {
         return <div>Please sign in to view categories</div>;
     }
@@ -68,6 +174,8 @@ export default function CategoriesPage() {
     if (error) {
         return <div>Error: {error}</div>;
     }
+
+    const hierarchicalCategories = organizeCategories(categories);
 
     return (
         <div className="container mx-auto p-6 space-y-6">
@@ -90,7 +198,7 @@ export default function CategoriesPage() {
                     <TableBody>
                         {loading || isActionLoading ? (
                             <TableLoading columns={3} />
-                        ) : categories.length === 0 ? (
+                        ) : hierarchicalCategories.length === 0 ? (
                             <TableRow>
                                 <TableCell
                                     colSpan={3}
@@ -100,48 +208,9 @@ export default function CategoriesPage() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            categories.map((category) => (
-                                <TableRow key={category.id}>
-                                    <TableCell>{category.name}</TableCell>
-                                    <TableCell>
-                                        {category.description}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() =>
-                                                    handleView(category)
-                                                }
-                                                disabled={isActionLoading}
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() =>
-                                                    handleEdit(category)
-                                                }
-                                                disabled={isActionLoading}
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() =>
-                                                    handleDelete(category.id)
-                                                }
-                                                disabled={isActionLoading}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                            hierarchicalCategories.map((category) =>
+                                renderCategoryRow(category)
+                            )
                         )}
                     </TableBody>
                 </Table>

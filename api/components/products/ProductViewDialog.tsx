@@ -42,6 +42,7 @@ export function ProductViewDialog({
             <div className="grid grid-cols-2 gap-4">
                 <ViewField label="Name" value={product.name} />
                 <ViewField label="Code" value={product.code} />
+                <ViewField label="Brand" value={product.brand} />
                 <ViewField
                     label="Category"
                     value={categoryName || "Uncategorized"}

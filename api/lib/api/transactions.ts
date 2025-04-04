@@ -76,14 +76,18 @@ export async function createTransaction(
 ) {
     try {
         const date = new Date(data.date_of_transaction);
-        const dateOfTransaction = `${date.getFullYear()}-${String(
-            date.getMonth() + 1
-        ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(
-            date.getHours()
-        ).padStart(2, "0")}:${String(date.getMinutes()).padStart(
+        const phDate = new Date(
+            date.toLocaleString("en-US", { timeZone: "Asia/Manila" })
+        );
+
+        const dateOfTransaction = `${phDate.getFullYear()}-${String(
+            phDate.getMonth() + 1
+        ).padStart(2, "0")}-${String(phDate.getDate()).padStart(
             2,
             "0"
-        )}:${String(date.getSeconds()).padStart(2, "0")}`;
+        )} ${String(phDate.getHours()).padStart(2, "0")}:${String(
+            phDate.getMinutes()
+        ).padStart(2, "0")}:${String(phDate.getSeconds()).padStart(2, "0")}`;
 
         // Start a transaction to ensure all operations succeed or fail together
         await db.transaction(async (tx) => {
