@@ -1,29 +1,46 @@
 import React, { useState, useEffect } from "react";
 import { View, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from "react-native";
-import { Searchbar, Text, Snackbar } from "react-native-paper";
+import { Searchbar, Text, Portal } from "react-native-paper";
 import { Image } from 'expo-image';
-import { Product } from "../types";
+import { Product, Category } from "../types";
 import { fetchProducts } from "../api/products";
+import { fetchCategories } from "../api/categories";
 import { useUser } from "../contexts/UserContext";
 import { useProducts } from "../hooks/useProducts";
 import { useCart } from "../hooks/useCart";
 import { ProductModal } from "../components/ProductModal";
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows } from "../theme";
+import { Select } from "../components/ui/Select";
 
 export default function ProductsScreen() {
     const { userId } = useUser();
     const [searchQuery, setSearchQuery] = useState("");
     const { products, setProducts } = useProducts();
     const [refreshing, setRefreshing] = useState(false);
-    const [snackBarVisible, setSnackBarVisible] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const { addToCart, updateQuantity, items: cartItems } = useCart();
+    const [selectedParentCategory, setSelectedParentCategory] = useState<string>("all");
+    const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
+    const [categories, setCategories] = useState<Category[]>([]);
+
+    // Organize categories into a hierarchy
+    const organizeCategories = (categories: Category[]) => {
+        const parentCategories = categories.filter((cat) => !cat.parentId);
+        const getSubcategories = (parentId: number) =>
+            categories.filter((cat) => cat.parentId === parentId);
+        return { parentCategories, getSubcategories };
+    };
+
+    const { parentCategories, getSubcategories } = organizeCategories(categories);
+    const subcategories = selectedParentCategory !== "all" 
+        ? getSubcategories(parseInt(selectedParentCategory))
+        : [];
 
     useEffect(() => {
         loadProducts();
+        loadCategories();
     }, []);
 
     const loadProducts = async () => {
@@ -34,25 +51,48 @@ export default function ProductsScreen() {
             const productsData = await fetchProducts(userId);
             setProducts(productsData);
         } catch (error) {
-            setErrorMessage("Failed to load products");
-            setSnackBarVisible(true);
+            console.error("Failed to load products:", error);
         }
     };
 
-    const filteredProducts = products.filter((product) => {
-        const searchLower = searchQuery.toLowerCase();
-        return (
-            product.name.toLowerCase().includes(searchLower) ||
-            product.code.toLowerCase().includes(searchLower) ||
-            product.description?.toLowerCase().includes(searchLower)
-        );
-    });
+    const loadCategories = async () => {
+        try {
+            if (userId === null) {
+                throw new Error("No User ID.");
+            }
+            const categoriesData = await fetchCategories(userId);
+            setCategories(categoriesData);
+        } catch (error) {
+            console.error("Failed to load categories:", error);
+        }
+    };
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await loadProducts();
+        await Promise.all([loadProducts(), loadCategories()]);
         setRefreshing(false);
     };
+
+    // Filter products based on search term and category selections
+    const filteredProducts = products.filter((product) => {
+        const matchesSearch =
+            searchQuery === "" ||
+            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.code.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const category = categories.find((c) => c.id === product.categoryId);
+        const matchesCategory =
+            selectedParentCategory === "all" ||
+            (category?.parentId
+                ? category.parentId.toString() === selectedParentCategory
+                : category?.id.toString() === selectedParentCategory);
+
+        const matchesSubcategory =
+            selectedSubcategory === "all" ||
+            product.categoryId?.toString() === selectedSubcategory;
+
+        return matchesSearch && matchesCategory && matchesSubcategory;
+    });
 
     const handleAddToCart = (product: Product) => {
         try {
@@ -60,15 +100,8 @@ export default function ProductsScreen() {
                 throw new Error("Product is out of stock");
             }
             addToCart(product, 1);
-            setErrorMessage("Product added to cart");
-            setSnackBarVisible(true);
         } catch (error) {
-            if (error instanceof Error) {
-                setErrorMessage(error.message);
-            } else {
-                setErrorMessage("Failed to add product to cart");
-            }
-            setSnackBarVisible(true);
+            console.error("Error adding to cart:", error);
         }
     };
 
@@ -79,35 +112,18 @@ export default function ProductsScreen() {
                 throw new Error("Product not in cart");
             }
             updateQuantity(cartItem.id, cartItem.quantity - 1);
-            setErrorMessage("Product removed from cart");
-            setSnackBarVisible(true);
         } catch (error) {
-            if (error instanceof Error) {
-                setErrorMessage(error.message);
-            } else {
-                setErrorMessage("Failed to remove product from cart");
-            }
-            setSnackBarVisible(true);
+            console.error("Error removing from cart:", error);
         }
-    };
-
-    const handleProductPress = (product: Product) => {
-        setSelectedProduct(product);
-        setModalVisible(true);
-    };
-
-    const getRandomColor = (id: number) => {
-        const colors = [
-            '#3498db', '#2ecc71', '#e74c3c', '#f39c12', 
-            '#9b59b6', '#1abc9c', '#d35400', '#34495e'
-        ];
-        return colors[id % colors.length];
     };
 
     const renderProduct = ({ item }: { item: Product }) => (
         <TouchableOpacity 
             style={styles.productCard} 
-            onPress={() => handleProductPress(item)}
+            onPress={() => {
+                setSelectedProduct(item);
+                setModalVisible(true);
+            }}
             activeOpacity={0.7}
         >
             <View style={styles.productImageContainer}>
@@ -120,17 +136,12 @@ export default function ProductsScreen() {
                     />
                 ) : (
                     <View style={[
-                        styles.productImagePlaceholder, 
-                        { backgroundColor: getRandomColor(item.id) }
+                        styles.productImagePlaceholder,
+                        { backgroundColor: colors.gray300 }
                     ]}>
                         <Text style={styles.productInitial}>
                             {item.name.charAt(0).toUpperCase()}
                         </Text>
-                    </View>
-                )}
-                {item.stock <= 0 && (
-                    <View style={styles.outOfStockBadge}>
-                        <Text style={styles.outOfStockText}>Out of Stock</Text>
                     </View>
                 )}
             </View>
@@ -157,37 +168,35 @@ export default function ProductsScreen() {
                         </Text>
                     </View>
                     <View style={styles.productPriceRow}>
-                    <TouchableOpacity 
-                        style={[
-                            styles.removeButton,
-                            cartItems.filter((cartItem) => cartItem.product_id === item.id).length <= 0 && styles.disabledButton
-                        ]}
-                        onPress={() => handleRemoveFromCart(item)}
-                        disabled={cartItems.filter((cartItem) => cartItem.product_id === item.id).length <= 0 }
-                    >
-                        <Ionicons 
-                            name="remove" 
-                            size={24} 
-                            color={item.stock <= 0 ? colors.gray400 : colors.white} 
-                        />
-                    </TouchableOpacity>
-                    {console.log(cartItems.filter((cartItem) => cartItem.product_id === item.id))}
-                    <Text>{cartItems.filter((cartItem) => cartItem.product_id === item.id)?.[0]?.quantity || 0}</Text>
-                    <TouchableOpacity 
-                        style={[
-                            styles.addButton,
-                            item.stock <= 0 && styles.disabledButton
-                        ]}
-                        onPress={() => handleAddToCart(item)}
-                        disabled={item.stock <= 0}
-                    >
-                        <Ionicons 
-                            name="add" 
-                            size={24} 
-                            color={item.stock <= 0 ? colors.gray400 : colors.white} 
-                        />
-                    </TouchableOpacity>
-
+                        <TouchableOpacity 
+                            style={[
+                                styles.removeButton,
+                                cartItems.filter((cartItem) => cartItem.product_id === item.id).length <= 0 && styles.disabledButton
+                            ]}
+                            onPress={() => handleRemoveFromCart(item)}
+                            disabled={cartItems.filter((cartItem) => cartItem.product_id === item.id).length <= 0}
+                        >
+                            <Ionicons 
+                                name="remove" 
+                                size={24} 
+                                color={item.stock <= 0 ? colors.gray400 : colors.white} 
+                            />
+                        </TouchableOpacity>
+                        <Text>{cartItems.find((cartItem) => cartItem.product_id === item.id)?.quantity || 0}</Text>
+                        <TouchableOpacity 
+                            style={[
+                                styles.addButton,
+                                item.stock <= 0 && styles.disabledButton
+                            ]}
+                            onPress={() => handleAddToCart(item)}
+                            disabled={item.stock <= 0}
+                        >
+                            <Ionicons 
+                                name="add" 
+                                size={24} 
+                                color={item.stock <= 0 ? colors.gray400 : colors.white} 
+                            />
+                        </TouchableOpacity>
                     </View>
                 </View>
             </View>
@@ -197,14 +206,47 @@ export default function ProductsScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.searchContainer}>
-                <Searchbar
-                    placeholder="Search by name, code, or description"
-                    onChangeText={setSearchQuery}
-                    value={searchQuery}
-                    style={styles.searchbar}
-                    inputStyle={styles.searchInput}
-                    iconColor={colors.primary}
-                />
+                <View style={styles.filterRow}>
+                    <Searchbar
+                        placeholder="Search products..."
+                        onChangeText={setSearchQuery}
+                        value={searchQuery}
+                        style={styles.searchbar}
+                    />
+                </View>
+                <View style={styles.filterRow}>
+                    <Select
+                        label="Category"
+                        value={selectedParentCategory}
+                        onValueChange={(value) => {
+                            setSelectedParentCategory(value);
+                            setSelectedSubcategory("all");
+                        }}
+                        items={[
+                            { label: "All Categories", value: "all" },
+                            ...parentCategories.map(category => ({
+                                label: category.name,
+                                value: category.id.toString()
+                            }))
+                        ]}
+                        style={styles.select}
+                    />
+                    {subcategories.length > 0 && (
+                        <Select
+                            label="Subcategory"
+                            value={selectedSubcategory}
+                            onValueChange={setSelectedSubcategory}
+                            items={[
+                                { label: "All Subcategories", value: "all" },
+                                ...subcategories.map(category => ({
+                                    label: category.name,
+                                    value: category.id.toString()
+                                }))
+                            ]}
+                            style={styles.select}
+                        />
+                    )}
+                </View>
             </View>
             
             <FlatList
@@ -223,20 +265,13 @@ export default function ProductsScreen() {
                 }
             />
 
-            <Snackbar
-                visible={snackBarVisible}
-                onDismiss={() => setSnackBarVisible(false)}
-                duration={2000}
-                style={styles.snackbar}
-            >
-                {errorMessage}
-            </Snackbar>
-
-            <ProductModal
-                visible={modalVisible}
-                onDismiss={() => setModalVisible(false)}
-                product={selectedProduct}
-            />
+            <Portal>
+                <ProductModal
+                    visible={modalVisible}
+                    onDismiss={() => setModalVisible(false)}
+                    product={selectedProduct}
+                />
+            </Portal>
         </View>
     );
 }
@@ -251,14 +286,19 @@ const styles = StyleSheet.create({
         paddingTop: spacing.md,
         ...shadows.sm,
     },
+    filterRow: {
+        flexDirection: 'row',
+        paddingHorizontal: spacing.md,
+        paddingBottom: spacing.md,
+        gap: spacing.sm,
+    },
     searchbar: {
-        marginHorizontal: spacing.md,
-        marginBottom: spacing.md,
+        flex: 1,
         borderRadius: 12,
         elevation: 2,
     },
-    searchInput: {
-        fontSize: typography.fontSize.base,
+    select: {
+        flex: 1,
     },
     productList: {
         padding: spacing.sm,
@@ -290,20 +330,6 @@ const styles = StyleSheet.create({
         fontSize: 40,
         fontWeight: 'bold',
         color: 'rgba(255, 255, 255, 0.8)',
-    },
-    outOfStockBadge: {
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        backgroundColor: 'rgba(231, 76, 60, 0.8)',
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs / 2,
-        borderBottomLeftRadius: 8,
-    },
-    outOfStockText: {
-        color: colors.white,
-        fontSize: typography.fontSize.xs,
-        fontWeight: 'bold',
     },
     productInfo: {
         padding: spacing.md,
@@ -362,8 +388,5 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         backgroundColor: colors.gray300,
-    },
-    snackbar: {
-        marginBottom: spacing.lg,
     },
 });
