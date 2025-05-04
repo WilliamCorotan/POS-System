@@ -15,6 +15,8 @@ import { useProducts } from "../hooks/useProducts";
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows } from "../theme";
 import { Button } from "../components/ui/Button";
+import { savePendingTransaction, getPendingTransactions, removePendingTransaction, PendingTransaction } from "../utils/offlineTransactions";
+import NetInfo from '@react-native-community/netinfo';
 
 export default function CartScreen() {
     const { userId } = useUser();
@@ -33,12 +35,37 @@ export default function CartScreen() {
     const [checkoutVisible, setCheckoutVisible] = useState(false);
     const [manualCodeVisible, setManualCodeVisible] = useState(false);
     const [manualCode, setManualCode] = useState("");
+    const [isOnline, setIsOnline] = useState(true);
+    const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
+    const [syncing, setSyncing] = useState(false);
+
+    useEffect(() => {
+        const unsubscribe = NetInfo.addEventListener(state => {
+            setIsOnline(state.isConnected ?? false);
+        });
+
+        loadPendingTransactions();
+
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
+    const loadPendingTransactions = async () => {
+        const pending = await getPendingTransactions();
+        setPendingTransactions(pending);
+    };
 
     const handleCheckout = async (
         paymentMethodId: number,
         cashReceived: number,
         referenceNumber?: string
     ) => {
+        if (!userId) {
+            alert("User ID is required");
+            return;
+        }
+
         const transaction = {
             payment_method_id: paymentMethodId,
             date_of_transaction: new Date().toISOString(),
@@ -49,9 +76,50 @@ export default function CartScreen() {
             reference_number: referenceNumber
         };
 
-        await createTransaction(userId, transaction);
-        await clearCart();
-        setCheckoutVisible(false);
+        try {
+            if (false) {
+                await createTransaction(userId, transaction);
+            } else {
+                await savePendingTransaction(transaction);
+                await loadPendingTransactions();
+            }
+            await clearCart();
+            setCheckoutVisible(false);
+        } catch (error) {
+            console.error("Error during checkout:", error);
+            alert("Error during checkout. Please try again.");
+        }
+    };
+
+    const handleSync = async () => {
+        if (!userId) {
+            alert("User ID is required");
+            return;
+        }
+
+        if (!isOnline) {
+            alert("No internet connection. Please try again when online.");
+            return;
+        }
+
+        setSyncing(true);
+        try {
+            for (const pendingTx of pendingTransactions) {
+                try {
+                    await createTransaction(userId, pendingTx);
+                    await removePendingTransaction(pendingTx.localId);
+                } catch (error) {
+                    console.error(`Error syncing transaction ${pendingTx.localId}:`, error);
+                }
+            }
+            await loadPendingTransactions();
+            alert("Sync completed successfully!");
+        } catch (error) {
+            console.error("Error during sync:", error);
+            alert("Error during sync. Please try again.");
+        } finally {
+            setSyncing(false);
+        }
     };
 
     const handleManualCodeSubmit = () => {
@@ -130,6 +198,28 @@ export default function CartScreen() {
 
     return (
         <View style={styles.container}>
+            {!isOnline && (
+                <View style={styles.offlineBanner}>
+                    <Ionicons name="cloud-offline-outline" size={20} color={colors.white} />
+                    <Text style={styles.offlineText}>You are offline</Text>
+                </View>
+            )}
+
+            {pendingTransactions.length > 0 && (
+                <View style={styles.syncBanner}>
+                    <Text style={styles.syncText}>
+                        {pendingTransactions.length} pending transaction{pendingTransactions.length > 1 ? 's' : ''}
+                    </Text>
+                    <Button
+                        title={syncing ? "Syncing..." : "Sync Now"}
+                        variant="primary"
+                        size="small"
+                        onPress={handleSync}
+                        disabled={syncing || !isOnline}
+                    />
+                </View>
+            )}
+
             {items.length > 0 ? (
                 <>
                     <FlatList
@@ -354,5 +444,28 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.base,
         color: colors.textSecondary,
         textAlign: 'center',
+    },
+    offlineBanner: {
+        backgroundColor: colors.error,
+        padding: spacing.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.xs,
+    },
+    offlineText: {
+        color: colors.white,
+        fontFamily: typography.fontFamily.medium,
+    },
+    syncBanner: {
+        backgroundColor: colors.warning,
+        padding: spacing.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    syncText: {
+        color: colors.textPrimary,
+        fontFamily: typography.fontFamily.medium,
     },
 });

@@ -132,7 +132,6 @@ function MainApp() {
         name="Transactions" 
         component={TransactionsStack}
         options={{
-          headerShown: false,
           title: 'Transactions',
         }}
       />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Image } from 'react-native';
+import { StyleSheet, View, Image, TextInput } from 'react-native';
 import { Text } from 'react-native-paper';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 import { useUser } from '../contexts/UserContext';
@@ -44,7 +44,7 @@ export default function ScanClerkScreen() {
   if (hasPermission === false) {
     return (
       <View style={styles.container}>
-        <Ionicons name="camera-off-outline" size={60} color={colors.error} />
+        <Ionicons name="camera-outline" size={60} color={colors.error} />
         <Text style={styles.errorText}>No access to camera</Text>
         <Button
           title="Grant Permission"
