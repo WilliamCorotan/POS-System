@@ -6,7 +6,6 @@ const PENDING_TRANSACTIONS_KEY = 'pending_transactions';
 export interface PendingTransaction extends Omit<Transaction, 'id'> {
     localId: string;
     timestamp: number;
-    status: 'pending';
 }
 
 export const savePendingTransaction = async (transaction: Omit<Transaction, 'id'>): Promise<string> => {
@@ -18,7 +17,6 @@ export const savePendingTransaction = async (transaction: Omit<Transaction, 'id'
             ...transaction,
             localId,
             timestamp: Date.now(),
-            status: 'pending'
         };
         
         await AsyncStorage.setItem(

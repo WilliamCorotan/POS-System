@@ -17,6 +17,9 @@ import { colors, spacing, typography, shadows } from "../theme";
 import { Button } from "../components/ui/Button";
 import { savePendingTransaction, getPendingTransactions, removePendingTransaction, PendingTransaction } from "../utils/offlineTransactions";
 import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const LAST_SYNC_KEY = 'last_sync_timestamp';
 
 export default function CartScreen() {
     const { userId } = useUser();
@@ -38,6 +41,7 @@ export default function CartScreen() {
     const [isOnline, setIsOnline] = useState(true);
     const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
     const [syncing, setSyncing] = useState(false);
+    const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
 
     useEffect(() => {
         const unsubscribe = NetInfo.addEventListener(state => {
@@ -45,11 +49,31 @@ export default function CartScreen() {
         });
 
         loadPendingTransactions();
+        loadLastSyncTime();
 
         return () => {
             unsubscribe();
         };
     }, []);
+
+    const loadLastSyncTime = async () => {
+        try {
+            const timestamp = await AsyncStorage.getItem(LAST_SYNC_KEY);
+            setLastSyncTime(timestamp ? parseInt(timestamp) : null);
+        } catch (error) {
+            console.error('Error loading last sync time:', error);
+        }
+    };
+
+    const updateLastSyncTime = async () => {
+        try {
+            const timestamp = Date.now();
+            await AsyncStorage.setItem(LAST_SYNC_KEY, timestamp.toString());
+            setLastSyncTime(timestamp);
+        } catch (error) {
+            console.error('Error updating last sync time:', error);
+        }
+    };
 
     const loadPendingTransactions = async () => {
         const pending = await getPendingTransactions();
@@ -77,14 +101,15 @@ export default function CartScreen() {
         };
 
         try {
-            if (false) {
+            if (isOnline) {
                 await createTransaction(userId, transaction);
             } else {
                 await savePendingTransaction(transaction);
                 await loadPendingTransactions();
             }
-            await clearCart();
+            clearCart();
             setCheckoutVisible(false);
+            alert("Transaction completed successfully!");
         } catch (error) {
             console.error("Error during checkout:", error);
             alert("Error during checkout. Please try again.");
@@ -113,6 +138,7 @@ export default function CartScreen() {
                 }
             }
             await loadPendingTransactions();
+            await updateLastSyncTime();
             alert("Sync completed successfully!");
         } catch (error) {
             console.error("Error during sync:", error);
@@ -120,6 +146,12 @@ export default function CartScreen() {
         } finally {
             setSyncing(false);
         }
+    };
+
+    const formatLastSyncTime = () => {
+        if (!lastSyncTime) return 'Never';
+        const date = new Date(lastSyncTime);
+        return date.toLocaleString();
     };
 
     const handleManualCodeSubmit = () => {
@@ -179,6 +211,7 @@ export default function CartScreen() {
     );
 
     const getSettings = async () => {
+        if (!userId) return;
         const paymentMethods = await fetchPaymentMethods(userId);
         setPaymentMethods(paymentMethods);
     };
@@ -207,9 +240,14 @@ export default function CartScreen() {
 
             {pendingTransactions.length > 0 && (
                 <View style={styles.syncBanner}>
-                    <Text style={styles.syncText}>
-                        {pendingTransactions.length} pending transaction{pendingTransactions.length > 1 ? 's' : ''}
-                    </Text>
+                    <View style={styles.syncInfo}>
+                        <Text style={styles.syncText}>
+                            {pendingTransactions.length} pending transaction{pendingTransactions.length > 1 ? 's' : ''}
+                        </Text>
+                        <Text style={styles.lastSyncText}>
+                            Last sync: {formatLastSyncTime()}
+                        </Text>
+                    </View>
                     <Button
                         title={syncing ? "Syncing..." : "Sync Now"}
                         variant="primary"
@@ -464,8 +502,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
     },
+    syncInfo: {
+        flex: 1,
+    },
     syncText: {
         color: colors.textPrimary,
         fontFamily: typography.fontFamily.medium,
+    },
+    lastSyncText: {
+        fontSize: typography.fontSize.sm,
+        color: colors.textSecondary,
+        marginTop: spacing.xs / 2,
     },
 });
