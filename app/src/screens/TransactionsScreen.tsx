@@ -11,6 +11,7 @@ import { TransactionModal } from "../components/TransactionModal";
 import { colors, spacing, typography, shadows } from "../theme";
 import { SyncButton } from "../components/SyncButton";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RequireAuth } from "../components/auth/RequireAuth";
 
 type RootStackParamList = {
     RefundScreen: { transactionId: number };
@@ -23,20 +24,20 @@ export default function TransactionsScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
-    const { userId } = useUser();
+    const { user } = useUser();
     const navigation = useNavigation<NavigationProp>();
 
-    console.log('t >> ', transactions);
+
     useEffect(() => {
-        if (userId) {
+        if (user) {
             loadTransactions();
         }
-    }, [userId]);
+    }, [user]);
 
     const loadTransactions = async () => {
-        if (!userId) return;
+        if (!user) return;
         try {
-            const transactionsData = await fetchTransactions(userId);
+            const transactionsData = await fetchTransactions(user.id);
             setTransactions(transactionsData);
         } catch (error) {
             console.error("Error loading transactions:", error);
@@ -111,7 +112,7 @@ export default function TransactionsScreen() {
                     <View style={styles.totalContainer}>
                         <Text style={styles.totalLabel}>Total:</Text>
                         <Text style={styles.totalAmount}>
-                            PHP {Number(item.totalPrice).toFixed(2) - Number(item.totalRefund).toFixed(2)}
+                            PHP {(Number(item.totalPrice) - Number(item.totalRefund)).toFixed(2)}
                         </Text>
                     </View>
                 </View>
@@ -120,32 +121,34 @@ export default function TransactionsScreen() {
     );
 
     return (
-        <View style={styles.container}>
-            <SyncButton />
-            <FlatList
-                data={transactions}
-                renderItem={renderTransaction}
-                keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={styles.listContent}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={handleRefresh}
-                        tintColor={colors.primary}
-                        colors={[colors.primary]}
-                    />
-                }
-            />
+        <RequireAuth fallbackMessage="Please sign in to view transactions">
+            <View style={styles.container}>
+                <SyncButton />
+                <FlatList
+                    data={transactions}
+                    renderItem={renderTransaction}
+                    keyExtractor={(item) => item.id.toString()}
+                    contentContainerStyle={styles.listContent}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={handleRefresh}
+                            tintColor={colors.primary}
+                            colors={[colors.primary]}
+                        />
+                    }
+                />
 
-            <Portal>
-            <TransactionModal
-                visible={modalVisible}
-                onDismiss={() => setModalVisible(false)}
-                transaction={selectedTransaction}
-                onRefund={handleRefund}
-            />
-            </Portal>
-        </View>
+                <Portal>
+                <TransactionModal
+                    visible={modalVisible}
+                    onDismiss={() => setModalVisible(false)}
+                    transaction={selectedTransaction}
+                    onRefund={handleRefund}
+                />
+                </Portal>
+            </View>
+        </RequireAuth>
     );
 }
 

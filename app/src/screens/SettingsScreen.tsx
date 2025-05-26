@@ -7,17 +7,22 @@ import { Button } from '../components/ui/Button';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
-  const { userId, clearUserId } = useUser();
+  const { user, clearUser } = useUser();
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarText}>
-            {userId ? userId.charAt(0).toUpperCase() : 'U'}
+            {user.name.charAt(0).toUpperCase()}
           </Text>
         </View>
-        <Text style={styles.title}>Account Settings</Text>
+        <Text style={styles.title}>{user.name}</Text>
+        <Text style={styles.subtitle}>{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</Text>
       </View>
       
       <View style={styles.section}>
@@ -28,15 +33,21 @@ export default function SettingsScreen() {
         
         <View style={styles.card}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>User ID</Text>
-            <Text style={styles.infoValue}>{userId}</Text>
+            <Text style={styles.infoLabel}>Username</Text>
+            <Text style={styles.infoValue}>{user.username}</Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Connection Status</Text>
-            <View style={styles.statusBadge}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-              <Text style={styles.statusText}>Connected</Text>
+            <Text style={styles.infoLabel}>Email</Text>
+            <Text style={styles.infoValue}>{user.email || 'Not provided'}</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Role</Text>
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleText}>
+                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+              </Text>
             </View>
           </View>
         </View>
@@ -91,7 +102,7 @@ export default function SettingsScreen() {
           title="Sign Out"
           variant="outline"
           icon={<Ionicons name="log-out-outline" size={20} color={colors.error} />}
-          onPress={clearUserId}
+          onPress={clearUser}
           style={styles.signOutButton}
           textStyle={{ color: colors.error }}
         />
@@ -127,6 +138,11 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xl,
     fontFamily: typography.fontFamily.bold,
     color: colors.textPrimary,
+  },
+  subtitle: {
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
   section: {
     marginBottom: spacing.lg,
@@ -165,18 +181,16 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.medium,
     color: colors.textPrimary,
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.success + '15',
+  roleBadge: {
+    backgroundColor: colors.primary + '15',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs / 2,
     borderRadius: 12,
   },
-  statusText: {
+  roleText: {
     fontSize: typography.fontSize.sm,
-    color: colors.success,
-    marginLeft: spacing.xs / 2,
+    color: colors.primary,
+    fontFamily: typography.fontFamily.medium,
   },
   settingRow: {
     flexDirection: 'row',

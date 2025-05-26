@@ -1,52 +1,72 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  clerkId: string;
+  username?: string; 
+  role?: 'admin' | 'cashier' | 'manager'; 
+};
+
 type UserContextType = {
-  userId: string | null;
-  setUserId: (id: string) => Promise<void>;
-  clearUserId: () => Promise<void>;
+  user: User | null;
+  setUser: (user: User) => Promise<void>;
+  clearUser: () => Promise<void>;
+  isLoading: boolean;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [userId, setUserIdState] = useState<string | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadUserId();
+    loadUser();
   }, []);
 
-  const loadUserId = async () => {
+  const loadUser = async () => {
     try {
-      const savedUserId = await AsyncStorage.getItem('userId');
-      if (savedUserId) {
-        setUserIdState(savedUserId);
+      const savedUser = await AsyncStorage.getItem('user');
+      if (savedUser) {
+        setUserState(JSON.parse(savedUser));
       }
     } catch (error) {
-      console.error('Error loading user ID:', error);
+      console.error('Error loading user:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const setUserId = async (id: string) => {
+  const setUser = async (newUser: User) => {
     try {
-      await AsyncStorage.setItem('userId', id);
-      setUserIdState(id);
+      const userWithDerivedFields = {
+        ...newUser,
+        username: newUser.username || newUser.email.split('@')[0],
+        role: newUser.role || 'cashier',
+        userId: newUser.clerkId,
+      };
+      
+      await AsyncStorage.setItem('user', JSON.stringify(userWithDerivedFields));
+      setUserState(userWithDerivedFields);
     } catch (error) {
-      console.error('Error saving user ID:', error);
+      console.error('Error saving user:', error);
     }
   };
 
-  const clearUserId = async () => {
+  const clearUser = async () => {
     try {
-      await AsyncStorage.removeItem('userId');
-      setUserIdState(null);
+      await AsyncStorage.removeItem('user');
+      setUserState(null);
     } catch (error) {
-      console.error('Error clearing user ID:', error);
+      console.error('Error clearing user:', error);
     }
   };
 
   return (
-    <UserContext.Provider value={{ userId, setUserId, clearUserId }}>
+    <UserContext.Provider value={{ user, setUser, clearUser, isLoading }}>
       {children}
     </UserContext.Provider>
   );

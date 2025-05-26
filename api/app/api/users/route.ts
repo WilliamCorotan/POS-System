@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createUser, getUsersByParentId } from "@/lib/api/users";
 import { getCurrentUserId } from "@/lib/api/base";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 
 export async function GET() {
     try {
@@ -64,4 +67,51 @@ export async function POST(req: Request) {
             { status: 500 }
         );
     }
+} 
+
+export async function PUT(req: Request) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { email, password } = body;
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password are required" },
+        { status: 400 }
+      );
+    }
+
+    const user = await db.query.users.findFirst({
+      where: and(
+        eq(users.email, email),
+        eq(users.password, password),
+        eq(users.clerkId, userId)
+      ),
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      clerkId: user.clerkId,
+    });
+  } catch (error) {
+    console.error("Error checking user credentials:", error);
+    return NextResponse.json(
+      { error: "Failed to check credentials" },
+      { status: 500 }
+    );
+  }
 } 

@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Image } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Text, TextInput } from 'react-native-paper';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 import { useUser } from '../contexts/UserContext';
 import { colors, typography, spacing } from '../theme';
 import { Button } from '../components/ui/Button';
 import { Ionicons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+type RootStackParamList = {
+  Login: { clerkId: string };
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ScanClerkScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -14,6 +22,7 @@ export default function ScanClerkScreen() {
   const { setUserId } = useUser();
   const [manualEntry, setManualEntry] = useState(false);
   const [userId, setUserIdInput] = useState('');
+  const navigation = useNavigation<NavigationProp>();
 
   useEffect(() => {
     (async () => {
@@ -24,12 +33,12 @@ export default function ScanClerkScreen() {
 
   const handleBarCodeScanned = ({ data } : any) => {
     setScanning(false);
-    setUserId(data);
+    navigation.navigate('Login', { clerkId: data });
   };
 
   const handleManualSubmit = () => {
     if (userId.trim()) {
-      setUserId(userId.trim());
+      navigation.navigate('Login', { clerkId: userId.trim() });
     }
   };
 

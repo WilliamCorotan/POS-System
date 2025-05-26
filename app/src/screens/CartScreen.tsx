@@ -15,9 +15,10 @@ import { useProducts } from "../hooks/useProducts";
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows } from "../theme";
 import { Button } from "../components/ui/Button";
+import { RequireAuth } from "../components/auth/RequireAuth";
 
 export default function CartScreen() {
-    const { userId } = useUser();
+    const { user } = useUser();
     const {
         items,
         updateQuantity,
@@ -39,6 +40,8 @@ export default function CartScreen() {
         cashReceived: number,
         referenceNumber?: string
     ) => {
+        if (!user) return;
+
         const transaction = {
             payment_method_id: paymentMethodId,
             date_of_transaction: new Date().toISOString(),
@@ -46,10 +49,11 @@ export default function CartScreen() {
             total_price: getTotal(),
             status: "completed",
             items: items,
-            reference_number: referenceNumber
+            reference_number: referenceNumber,
+            user_id: user.id
         };
 
-        await createTransaction(userId, transaction);
+        await createTransaction(user.id, transaction);
         await clearCart();
         setCheckoutVisible(false);
     };
@@ -111,13 +115,14 @@ export default function CartScreen() {
     );
 
     const getSettings = async () => {
-        const paymentMethods = await fetchPaymentMethods(userId);
+        if (!user) return;
+        const paymentMethods = await fetchPaymentMethods(user.id);
         setPaymentMethods(paymentMethods);
     };
 
     useEffect(() => {
         getSettings();
-    }, []);
+    }, [user]);
 
     if (scanning) {
         return (
@@ -129,100 +134,102 @@ export default function CartScreen() {
     }
 
     return (
-        <View style={styles.container}>
-            {items.length > 0 ? (
-                <>
-                    <FlatList
-                        data={items}
-                        renderItem={renderCartItem}
-                        keyExtractor={(item) => item.id.toString()}
-                        contentContainerStyle={styles.cartList}
-                        ListFooterComponent={() => (
-                            <View style={styles.footer}>
-                                <View style={styles.totalRow}>
-                                    <Text style={styles.totalLabel}>Total:</Text>
-                                    <Text style={styles.totalAmount}>
-                                        PHP {getTotal().toFixed(2)}
-                                    </Text>
+        <RequireAuth fallbackMessage="Please sign in to manage your cart">
+            <View style={styles.container}>
+                {items.length > 0 ? (
+                    <>
+                        <FlatList
+                            data={items}
+                            renderItem={renderCartItem}
+                            keyExtractor={(item) => item.id.toString()}
+                            contentContainerStyle={styles.cartList}
+                            ListFooterComponent={() => (
+                                <View style={styles.footer}>
+                                    <View style={styles.totalRow}>
+                                        <Text style={styles.totalLabel}>Total:</Text>
+                                        <Text style={styles.totalAmount}>
+                                            PHP {getTotal().toFixed(2)}
+                                        </Text>
+                                    </View>
+                                    
+                                    <Button
+                                        title="Checkout"
+                                        variant="primary"
+                                        size="large"
+                                        fullWidth
+                                        onPress={() => setCheckoutVisible(true)}
+                                        style={styles.checkoutButton}
+                                    />
                                 </View>
-                                
-                                <Button
-                                    title="Checkout"
-                                    variant="primary"
-                                    size="large"
-                                    fullWidth
-                                    onPress={() => setCheckoutVisible(true)}
-                                    style={styles.checkoutButton}
-                                />
-                            </View>
-                        )}
+                            )}
+                        />
+                    </>
+                ) : (
+                    <View style={styles.emptyCart}>
+                        <Ionicons name="cart-outline" size={80} color={colors.gray400} />
+                        <Text style={styles.emptyCartText}>Your cart is empty</Text>
+                        <Text style={styles.emptyCartSubtext}>
+                            Scan or search for products to add them to your cart
+                        </Text>
+                    </View>
+                )}
+
+                <View style={styles.buttonContainer}>
+                    <Button
+                        title="Scan Product"
+                        variant="primary"
+                        icon={<Ionicons name="barcode-outline" size={20} color={colors.white} />}
+                        onPress={() => setScanning(true)}
+                        style={styles.scanButton}
                     />
-                </>
-            ) : (
-                <View style={styles.emptyCart}>
-                    <Ionicons name="cart-outline" size={80} color={colors.gray400} />
-                    <Text style={styles.emptyCartText}>Your cart is empty</Text>
-                    <Text style={styles.emptyCartSubtext}>
-                        Scan or search for products to add them to your cart
-                    </Text>
+                    <Button
+                        title="Enter Code"
+                        variant="outline"
+                        icon={<Ionicons name="keypad-outline" size={20} color={colors.primary} />}
+                        onPress={() => setManualCodeVisible(true)}
+                        style={styles.codeButton}
+                    />
                 </View>
-            )}
 
-            <View style={styles.buttonContainer}>
-                <Button
-                    title="Scan Product"
-                    variant="primary"
-                    icon={<Ionicons name="barcode-outline" size={20} color={colors.white} />}
-                    onPress={() => setScanning(true)}
-                    style={styles.scanButton}
+                <CheckoutDialog
+                    visible={checkoutVisible}
+                    onDismiss={() => setCheckoutVisible(false)}
+                    onCheckout={handleCheckout}
+                    total={getTotal()}
+                    paymentMethods={paymentMethods}
                 />
-                <Button
-                    title="Enter Code"
-                    variant="outline"
-                    icon={<Ionicons name="keypad-outline" size={20} color={colors.primary} />}
-                    onPress={() => setManualCodeVisible(true)}
-                    style={styles.codeButton}
-                />
+
+                <Portal>
+                    <Dialog
+                        visible={manualCodeVisible}
+                        onDismiss={() => setManualCodeVisible(false)}
+                    >
+                        <Dialog.Title>Enter Product Code</Dialog.Title>
+                        <Dialog.Content>
+                            <TextInput
+                                value={manualCode}
+                                onChangeText={setManualCode}
+                                mode="outlined"
+                                label="Product Code"
+                                autoCapitalize="none"
+                            />
+                        </Dialog.Content>
+                        <Dialog.Actions>
+                            <Button
+                                title="Cancel"
+                                variant="outline"
+                                onPress={() => setManualCodeVisible(false)}
+                            />
+                            <Button
+                                title="Add to Cart"
+                                variant="primary"
+                                onPress={handleManualCodeSubmit}
+                            />
+                        </Dialog.Actions>
+                    </Dialog>
+                </Portal>
             </View>
-
-            <CheckoutDialog
-                visible={checkoutVisible}
-                onDismiss={() => setCheckoutVisible(false)}
-                onCheckout={handleCheckout}
-                total={getTotal()}
-                paymentMethods={paymentMethods}
-            />
-
-            <Portal>
-                <Dialog
-                    visible={manualCodeVisible}
-                    onDismiss={() => setManualCodeVisible(false)}
-                >
-                    <Dialog.Title>Enter Product Code</Dialog.Title>
-                    <Dialog.Content>
-                        <TextInput
-                            value={manualCode}
-                            onChangeText={setManualCode}
-                            mode="outlined"
-                            label="Product Code"
-                            autoCapitalize="none"
-                        />
-                    </Dialog.Content>
-                    <Dialog.Actions>
-                        <Button
-                            title="Cancel"
-                            variant="outline"
-                            onPress={() => setManualCodeVisible(false)}
-                        />
-                        <Button
-                            title="Add to Cart"
-                            variant="primary"
-                            onPress={handleManualCodeSubmit}
-                        />
-                    </Dialog.Actions>
-                </Dialog>
-            </Portal>
-        </View>
+        </RequireAuth>
     );
 }
 
