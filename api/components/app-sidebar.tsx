@@ -5,6 +5,7 @@ import {
     ShoppingCart,
     FolderTree,
     SquareChartGantt,
+    Users,
 } from "lucide-react";
 
 import {
@@ -45,6 +46,11 @@ const items = [
         title: "Transactions",
         url: "/transactions",
         icon: ShoppingCart,
+    },
+    {
+        title: "Users",
+        url: "/users",
+        icon: Users,
     },
     {
         title: "Settings",

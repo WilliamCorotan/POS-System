@@ -107,6 +107,7 @@ export default function TransactionList({
                             <TableHead className="w-[30px]"></TableHead>
                             <TableHead>ID</TableHead>
                             <TableHead>Date</TableHead>
+                            <TableHead>User</TableHead>
                             <TableHead>Total</TableHead>
                             <TableHead>Payment Method</TableHead>
                             <TableHead>Status</TableHead>
@@ -117,7 +118,7 @@ export default function TransactionList({
                     </TableHeader>
                     <TableBody>
                         {loading || isRefreshing ? (
-                            <TableLoading columns={7} />
+                            <TableLoading columns={8} />
                         ) : transactions.length > 0 ? (
                             transactions.map((transaction) => (
                                 <>
@@ -159,8 +160,22 @@ export default function TransactionList({
                                                 toggleRow(transaction.id)
                                             }
                                         >
+                                            {transaction.user ? (
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{transaction.user.name}</span>
+                                                    <span className="text-sm text-muted-foreground">{transaction.user.email}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground">-</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell
+                                            onClick={() =>
+                                                toggleRow(transaction.id)
+                                            }
+                                        >
                                             PHP{" "}
-                                            {transaction.totalPrice.toFixed(2)}
+                                            {Number(transaction.totalPrice.toFixed(2)) - Number(transaction.totalRefund.toFixed(2))}
                                         </TableCell>
                                         <TableCell
                                             onClick={() =>
@@ -208,7 +223,7 @@ export default function TransactionList({
                                     {expandedRows.includes(transaction.id) && (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={7}
+                                                colSpan={8}
                                                 className="bg-muted/30 p-4"
                                             >
                                                 <div className="rounded-lg overflow-hidden">
@@ -254,15 +269,15 @@ export default function TransactionList({
                                                                         </TableCell>
                                                                         <TableCell className="text-right">
                                                                             PHP{" "}
-                                                                            {item.productSellPrice.toFixed(
-                                                                                2
-                                                                            )}
+                                                                            {
+                                                                                item.productSellPrice
+                                                                            }
                                                                         </TableCell>
                                                                         <TableCell className="text-right">
                                                                             PHP{" "}
                                                                             {(
-                                                                                item.quantity *
-                                                                                item.productSellPrice
+                                                                                item.productSellPrice *
+                                                                                item.quantity
                                                                             ).toFixed(
                                                                                 2
                                                                             )}
@@ -270,20 +285,6 @@ export default function TransactionList({
                                                                     </TableRow>
                                                                 )
                                                             )}
-                                                            <TableRow>
-                                                                <TableCell
-                                                                    colSpan={3}
-                                                                    className="text-right font-bold"
-                                                                >
-                                                                    Total:
-                                                                </TableCell>
-                                                                <TableCell className="text-right font-bold">
-                                                                    PHP{" "}
-                                                                    {transaction.totalPrice.toFixed(
-                                                                        2
-                                                                    )}
-                                                                </TableCell>
-                                                            </TableRow>
                                                         </TableBody>
                                                     </Table>
                                                 </div>
@@ -295,10 +296,10 @@ export default function TransactionList({
                         ) : (
                             <TableRow>
                                 <TableCell
-                                    colSpan={7}
-                                    className="text-center py-4"
+                                    colSpan={8}
+                                    className="h-24 text-center"
                                 >
-                                    No transactions found for this period
+                                    No transactions found.
                                 </TableCell>
                             </TableRow>
                         )}
@@ -306,15 +307,13 @@ export default function TransactionList({
                 </Table>
             </div>
 
-            {selectedTransactionId && (
-                <RefundForm
-                    open={openRefundDialog}
-                    onOpenChange={setOpenRefundDialog}
-                    onSubmit={handleRefundSubmit}
-                    transactionId={selectedTransactionId}
-                    isLoading={isActionLoading}
-                />
-            )}
+            <RefundForm
+                open={openRefundDialog}
+                onOpenChange={setOpenRefundDialog}
+                onSubmit={handleRefundSubmit}
+                transactionId={selectedTransactionId ?? 0}
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

@@ -9,6 +9,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { TransactionModal } from "../components/TransactionModal";
 import { colors, spacing, typography, shadows } from "../theme";
+import { SyncButton } from "../components/SyncButton";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
+type RootStackParamList = {
+    RefundScreen: { transactionId: number };
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function TransactionsScreen() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -16,14 +24,17 @@ export default function TransactionsScreen() {
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const { userId } = useUser();
-    const navigation = useNavigation();
+    const navigation = useNavigation<NavigationProp>();
 
     console.log('t >> ', transactions);
     useEffect(() => {
-        loadTransactions();
-    }, []);
+        if (userId) {
+            loadTransactions();
+        }
+    }, [userId]);
 
     const loadTransactions = async () => {
+        if (!userId) return;
         try {
             const transactionsData = await fetchTransactions(userId);
             setTransactions(transactionsData);
@@ -110,6 +121,7 @@ export default function TransactionsScreen() {
 
     return (
         <View style={styles.container}>
+            <SyncButton />
             <FlatList
                 data={transactions}
                 renderItem={renderTransaction}

@@ -12,6 +12,8 @@ import { addImageUrlToProducts } from "./10.add-image-url-column";
 import { addUnitMeasurementString } from "./11-add-unit-measurement-string";
 import { addCategoryParentId } from "./12-add-category-parent-id";
 import { addBrandToProducts } from "./13-add-brand-to-products";
+import { removeUniqueClerkId } from "./14-remove-unique-clerk-id";
+import { addUserIdToTransactions } from "./15-add-user-id-to-transactions";
 
 export async function runMigrations() {
     try {
@@ -58,6 +60,12 @@ export async function runMigrations() {
 
         await addBrandToProducts();
         console.log("✓ Added brand to products table");
+
+        await removeUniqueClerkId();
+        console.log("✓ Removed unique constraint from clerk_id in users table");
+
+        await addUserIdToTransactions();
+        console.log("✓ Added user_id to transactions table");
 
         console.log("All migrations completed successfully");
     } catch (error) {
