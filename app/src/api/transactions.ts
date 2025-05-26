@@ -1,5 +1,6 @@
 import { Transaction } from "../types";
 import { API_URL, createHeaders } from "./config";
+import { offlineService } from "../services/offlineService";
 
 export const fetchTransactions = async (
     userId: string
@@ -9,10 +10,13 @@ export const fetchTransactions = async (
             headers: createHeaders(userId),
         });
         if (!response.ok) throw new Error("Failed to fetch transactions");
-        return await response.json();
+        const transactions = await response.json();
+        await offlineService.saveOfflineData({ transactions });
+        return transactions;
     } catch (error) {
         console.error("Error fetching transactions:", error);
-        throw error;
+        const offlineData = await offlineService.getOfflineData();
+        return offlineData.transactions;
     }
 };
 
@@ -26,11 +30,19 @@ export const createTransaction = async (
             headers: createHeaders(userId),
             body: JSON.stringify(transactionData),
         });
-        console.log("check >>", response);
         if (!response.ok) throw new Error("Failed to create transaction");
-        return await response.json();
+        const transaction = await response.json();
+        const offlineData = await offlineService.getOfflineData();
+        await offlineService.saveOfflineData({
+            transactions: [...offlineData.transactions, transaction],
+        });
+        return transaction;
     } catch (error) {
         console.error("Error creating transaction:", error);
+        await offlineService.addToQueue({
+            type: 'transaction',
+            data: transactionData,
+        });
         throw error;
     }
 };
@@ -49,7 +61,13 @@ export const refundTransaction = async (
             }
         );
         if (!response.ok) throw new Error("Failed to refund transaction");
-        return await response.json();
+        const transaction = await response.json();
+        const offlineData = await offlineService.getOfflineData();
+        const updatedTransactions = offlineData.transactions.map(t =>
+            t.id === transactionId ? transaction : t
+        );
+        await offlineService.saveOfflineData({ transactions: updatedTransactions });
+        return transaction;
     } catch (error) {
         console.error("Error refunding transaction:", error);
         throw error;
