@@ -8,16 +8,16 @@ import {
 } from '../api/refunds';
 
 export function useRefunds() {
-  const { userId } = useUser();
+  const { user } = useUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const getRefundableItems = async (transactionId: number) => {
-    if (!userId) throw new Error("User not authenticated");
+    if (!user) throw new Error("User not authenticated");
     
     setLoading(true);
     try {
-      const data = await fetchRefundableItems(userId, transactionId);
+      const data = await fetchRefundableItems(user.clerkId, transactionId);
       return data;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to fetch refundable items";
@@ -29,11 +29,11 @@ export function useRefunds() {
   };
 
   const createRefund = async (data: RefundFormData) => {
-    if (!userId) throw new Error("User not authenticated");
+    if (!user) throw new Error("User not authenticated");
     
     setLoading(true);
     try {
-      const result = await apiCreateRefund(userId, data);
+      const result = await apiCreateRefund(user.clerkId, data);
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create refund";
@@ -45,11 +45,11 @@ export function useRefunds() {
   };
 
   const fetchRefunds = async (): Promise<Refund[]> => {
-    if (!userId) throw new Error("User not authenticated");
+    if (!user) throw new Error("User not authenticated");
     
     setLoading(true);
     try {
-      const refunds = await apiFetchRefunds(userId);
+      const refunds = await apiFetchRefunds(user.clerkId);
       return refunds;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to fetch refunds";

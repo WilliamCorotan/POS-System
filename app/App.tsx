@@ -85,6 +85,8 @@ function MainApp() {
   }
 
   return (
+    <NavigationContainer>
+
     <Tab.Navigator
       initialRouteName="Cart"
       screenOptions={({ route }) => ({
@@ -160,6 +162,7 @@ function MainApp() {
         }}
       />
     </Tab.Navigator>
+    </NavigationContainer>
   );
 }
 

@@ -14,7 +14,7 @@ import { colors, spacing, typography, shadows } from "../theme";
 import { Select } from "../components/ui/Select";
 
 export default function ProductsScreen() {
-    const { userId } = useUser();
+    const { user } = useUser();
     const [searchQuery, setSearchQuery] = useState("");
     const { products, setProducts } = useProducts();
     const [refreshing, setRefreshing] = useState(false);
@@ -45,10 +45,10 @@ export default function ProductsScreen() {
 
     const loadProducts = async () => {
         try {
-            if (userId === null) {
+            if (user === null) {
                 throw new Error("No User ID.");
             }
-            const productsData = await fetchProducts(userId);
+            const productsData = await fetchProducts(user.clerkId);
             setProducts(productsData);
         } catch (error) {
             console.error("Failed to load products:", error);
@@ -57,10 +57,10 @@ export default function ProductsScreen() {
 
     const loadCategories = async () => {
         try {
-            if (userId === null) {
+            if (user === null) {
                 throw new Error("No User ID.");
             }
-            const categoriesData = await fetchCategories(userId);
+            const categoriesData = await fetchCategories(user.clerkId);
             setCategories(categoriesData);
         } catch (error) {
             console.error("Failed to load categories:", error);

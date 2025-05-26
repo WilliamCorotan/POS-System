@@ -8,15 +8,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useProducts } from '../hooks/useProducts';
 
 export default function SettingsScreen() {
-  const { userId, clearUserId } = useUser();
+  const { user, clearUser } = useUser();
   const { updateSettings } = useProducts();
   const [syncing, setSyncing] = useState(false);
 
   const handleSync = async () => {
-    if (!userId) return;
+    if (!user) return;
     setSyncing(true);
     try {
-      await updateSettings(userId);
+      await updateSettings(user.id);
     } catch (error) {
       console.error('Error syncing settings:', error);
     } finally {
@@ -29,11 +29,11 @@ export default function SettingsScreen() {
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarText}>
-            {user.name.charAt(0).toUpperCase()}
+            {user?.name?.charAt(0).toUpperCase()}
           </Text>
         </View>
-        <Text style={styles.title}>{user.name}</Text>
-        <Text style={styles.subtitle}>{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</Text>
+        <Text style={styles.title}>{user?.name}</Text>
+        <Text style={styles.subtitle}>{user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}</Text>
       </View>
       
       <View style={styles.section}>
@@ -45,19 +45,19 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Username</Text>
-            <Text style={styles.infoValue}>{user.username}</Text>
+            <Text style={styles.infoValue}>{user?.username}</Text>
           </View>
           
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue}>{user.email || 'Not provided'}</Text>
+            <Text style={styles.infoValue}>{user?.email || 'Not provided'}</Text>
           </View>
           
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Role</Text>
             <View style={styles.roleBadge}>
               <Text style={styles.roleText}>
-                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
               </Text>
             </View>
           </View>

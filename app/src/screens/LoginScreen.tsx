@@ -28,6 +28,9 @@ export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
   const clerkId = route.params?.clerkId;
 
+  console.log(clerkId, 'clerkId');
+  console.log(endpoint, 'endpoint');
+
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Please enter both email and password');
@@ -37,6 +40,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     setError('');
 
+    console.log(createHeaders(clerkId), 'createHeaders');
     try {
       const response = await fetch(endpoint, {
         method: 'PUT',
@@ -96,7 +100,7 @@ export default function LoginScreen() {
             mode="outlined"
             autoCapitalize="none"
             keyboardType="email-address"
-            left={<TextInput.Icon icon="mail-outline" />}
+            left={<TextInput.Icon icon="email" />}
           />
 
           <TextInput

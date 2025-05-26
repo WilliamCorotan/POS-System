@@ -37,7 +37,7 @@ export default function TransactionsScreen() {
     const loadTransactions = async () => {
         if (!user) return;
         try {
-            const transactionsData = await fetchTransactions(user.id);
+            const transactionsData = await fetchTransactions(user.clerkId);
             setTransactions(transactionsData);
         } catch (error) {
             console.error("Error loading transactions:", error);

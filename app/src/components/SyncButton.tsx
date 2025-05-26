@@ -10,10 +10,10 @@ export const SyncButton = () => {
   const [syncing, setSyncing] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const { userId } = useUser();
+  const { user } = useUser();
 
   const handleSync = async () => {
-    if (!userId) {
+    if (!user) {
       setSnackbarMessage('User not authenticated');
       setSnackbarVisible(true);
       return;
@@ -28,9 +28,9 @@ export const SyncButton = () => {
       for (const item of queue) {
         try {
           if (item.type === 'transaction') {
-            await createTransaction(userId, item.data);
+            await createTransaction(user.clerkId, item.data);
           } else if (item.type === 'refund') {
-            await createRefund(userId, item.data);
+            await createRefund(user.clerkId, item.data);
           }
           successCount++;
         } catch (error) {
