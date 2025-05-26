@@ -11,7 +11,6 @@ export async function PUT(request: Request, { params }: { params: any }) {
     try {
         const body = await request.json();
 
-        console.log("checkk >>", body, params);
         const updatedTransaction = await updateTransaction(
             parseInt(params.id),
             body,

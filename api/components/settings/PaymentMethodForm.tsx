@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PaymentMethod } from "@/types";
+import { Spinner } from "@/components/ui/spinner";
 
 interface PaymentMethodFormData {
     name: string;
@@ -22,6 +23,7 @@ interface PaymentMethodFormProps {
     onSubmit: (data: PaymentMethodFormData) => void;
     initialData?: PaymentMethod | null;
     mode: "create" | "edit";
+    isLoading?: boolean;
 }
 
 export function PaymentMethodForm({
@@ -30,12 +32,12 @@ export function PaymentMethodForm({
     onSubmit,
     initialData,
     mode,
+    isLoading = false,
 }: PaymentMethodFormProps) {
     const [formData, setFormData] = useState<PaymentMethodFormData>({
         name: "",
     });
 
-    // Update form data when initialData changes
     useEffect(() => {
         if (initialData) {
             setFormData({ name: initialData.name });
@@ -79,11 +81,15 @@ export function PaymentMethodForm({
                                 }
                                 className="col-span-3"
                                 required
+                                disabled={isLoading}
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="submit">
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading && (
+                                <Spinner className="mr-2" size="sm" />
+                            )}
                             {mode === "create" ? "Create" : "Save"}
                         </Button>
                     </DialogFooter>

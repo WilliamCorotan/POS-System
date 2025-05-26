@@ -16,7 +16,7 @@ export default function ProductsPage() {
                 <h1 className="text-2xl font-bold">Products</h1>
                 {/* Add New Product button can be added here */}
             </div>
-            <ProductList />
+            <ProductList options={{ type: "products" }} />
         </div>
     );
 }

@@ -1,5 +1,11 @@
 import { db } from "@/lib/db";
-import { transactions, orders, payments, products } from "@/lib/db/schema";
+import {
+    transactions,
+    orders,
+    payments,
+    products,
+    refunds,
+} from "@/lib/db/schema";
 import { eq, sql, getTableColumns, and } from "drizzle-orm";
 
 type TransactionFromApp = {
@@ -11,6 +17,7 @@ type TransactionFromApp = {
     cash_received: string;
     email_to?: string;
     clerk_id?: string;
+    reference_number?: string;
 };
 
 type TransactionItemFromApp = {
@@ -39,6 +46,23 @@ export async function getTransactions(userId: string) {
                 WHERE ${orders.transactionId} = ${transactions.id}
             )`.as("items"),
             paymentMethodName: payments.name,
+            totalRefund: sql`(
+                SELECT COALESCE(SUM(${refunds.totalAmount}), 0)
+                FROM ${refunds}
+                WHERE ${refunds.transactionId} = ${transactions.id}
+            )`.as("totalRefund"),
+            refundReasons: sql`(
+                SELECT GROUP_CONCAT(${refunds.reason}, '; ')
+                FROM ${refunds}
+                WHERE ${refunds.transactionId} = ${transactions.id}
+                AND ${refunds.reason} IS NOT NULL
+            )`.as("refundReasons"),
+            totalCost: sql`(
+                SELECT COALESCE(SUM(${products.buyPrice} * ${orders.quantity}), 0)
+                FROM ${orders}
+                JOIN ${products} ON ${orders.productId} = ${products.id}
+                WHERE ${orders.transactionId} = ${transactions.id}
+            )`.as("totalCost"),
         })
         .from(transactions)
         .leftJoin(payments, eq(transactions.paymentMethodId, payments.id))
@@ -52,14 +76,18 @@ export async function createTransaction(
 ) {
     try {
         const date = new Date(data.date_of_transaction);
-        const dateOfTransaction = `${date.getFullYear()}-${String(
-            date.getMonth() + 1
-        ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(
-            date.getHours()
-        ).padStart(2, "0")}:${String(date.getMinutes()).padStart(
+        const phDate = new Date(
+            date.toLocaleString("en-US", { timeZone: "Asia/Manila" })
+        );
+
+        const dateOfTransaction = `${phDate.getFullYear()}-${String(
+            phDate.getMonth() + 1
+        ).padStart(2, "0")}-${String(phDate.getDate()).padStart(
             2,
             "0"
-        )}:${String(date.getSeconds()).padStart(2, "0")}`;
+        )} ${String(phDate.getHours()).padStart(2, "0")}:${String(
+            phDate.getMinutes()
+        ).padStart(2, "0")}:${String(phDate.getSeconds()).padStart(2, "0")}`;
 
         // Start a transaction to ensure all operations succeed or fail together
         await db.transaction(async (tx) => {
@@ -71,6 +99,7 @@ export async function createTransaction(
                 emailTo: data.email_to ?? null,
                 totalPrice: parseFloat(data.total_price),
                 cashReceived: parseFloat(data.cash_received),
+                referenceNumber: data.reference_number ?? null,
                 clerkId: userId,
             };
 

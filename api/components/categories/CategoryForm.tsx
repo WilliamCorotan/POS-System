@@ -11,10 +11,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Category } from "@/types";
+import { Spinner } from "@/components/ui/spinner";
+import { useCategories } from "@/hooks/use-categories";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface CategoryFormData {
     name: string;
     description: string;
+    parentId?: number;
 }
 
 interface CategoryFormProps {
@@ -23,7 +33,13 @@ interface CategoryFormProps {
     onSubmit: (data: CategoryFormData) => void;
     initialData?: Category | null;
     mode: "create" | "edit";
+    isLoading?: boolean;
 }
+
+const defaultFormData: CategoryFormData = {
+    name: "",
+    description: "",
+};
 
 export function CategoryForm({
     open,
@@ -31,10 +47,15 @@ export function CategoryForm({
     onSubmit,
     initialData,
     mode,
+    isLoading = false,
 }: CategoryFormProps) {
-    const [formData, setFormData] = useState<CategoryFormData>({
-        name: "",
-        description: "",
+    const [formData, setFormData] = useState<CategoryFormData>(defaultFormData);
+    const { categories } = useCategories();
+
+    // Filter out the current category and its subcategories to prevent circular references
+    const availableParentCategories = categories.filter((category) => {
+        if (!initialData) return true;
+        return category.id !== initialData.id;
     });
 
     useEffect(() => {
@@ -42,15 +63,19 @@ export function CategoryForm({
             setFormData({
                 name: initialData.name,
                 description: initialData.description || "",
+                parentId: initialData.parentId,
             });
         } else {
-            setFormData({ name: "", description: "" });
+            setFormData(defaultFormData);
         }
-    }, [initialData]);
+    }, [initialData, open]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(formData);
+        await onSubmit(formData);
+        if (mode === "create") {
+            setFormData(defaultFormData);
+        }
     };
 
     return (
@@ -83,6 +108,7 @@ export function CategoryForm({
                                 }
                                 className="col-span-3"
                                 required
+                                disabled={isLoading}
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -99,11 +125,55 @@ export function CategoryForm({
                                     })
                                 }
                                 className="col-span-3"
+                                disabled={isLoading}
                             />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="parentId" className="text-right">
+                                Parent Category
+                            </Label>
+                            <div className="col-span-3">
+                                <Select
+                                    value={
+                                        formData.parentId?.toString() || "none"
+                                    }
+                                    onValueChange={(value) =>
+                                        setFormData({
+                                            ...formData,
+                                            parentId:
+                                                value === "none"
+                                                    ? undefined
+                                                    : parseInt(value),
+                                        })
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a parent category (optional)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">
+                                            None
+                                        </SelectItem>
+                                        {availableParentCategories.map(
+                                            (category) => (
+                                                <SelectItem
+                                                    key={category.id}
+                                                    value={category.id.toString()}
+                                                >
+                                                    {category.name}
+                                                </SelectItem>
+                                            )
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="submit">
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading && (
+                                <Spinner className="mr-2" size="sm" />
+                            )}
                             {mode === "create" ? "Create" : "Save"}
                         </Button>
                     </DialogFooter>

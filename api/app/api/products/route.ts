@@ -28,6 +28,7 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
+        console.log('si >', body);
         const newProduct = await createProduct(body, userId);
         return NextResponse.json(newProduct);
     } catch (error) {

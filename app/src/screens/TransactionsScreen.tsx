@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { View, FlatList, StyleSheet, RefreshControl } from "react-native";
-import { Card, Title, Paragraph, Button } from "react-native-paper";
+import React, { useState, useEffect, } from "react";
+import { View, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from "react-native";
+import { Text, Portal } from "react-native-paper";
 import { Transaction } from "../types";
 import { fetchTransactions } from "../api/transactions";
 import { useUser } from "../contexts/UserContext";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { TransactionModal } from "../components/TransactionModal";
 import { colors, spacing, typography, shadows } from "../theme";
 import { SyncButton } from "../components/SyncButton";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -20,9 +21,12 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export default function TransactionsScreen() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
     const { userId } = useUser();
     const navigation = useNavigation<NavigationProp>();
 
+    console.log('t >> ', transactions);
     useEffect(() => {
         if (userId) {
             loadTransactions();
@@ -49,6 +53,11 @@ export default function TransactionsScreen() {
         navigation.navigate('RefundScreen', { transactionId });
     };
 
+    const handleTransactionPress = (transaction: Transaction) => {
+        setSelectedTransaction(transaction);
+        setModalVisible(true);
+    };
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { 
@@ -61,12 +70,16 @@ export default function TransactionsScreen() {
     };
 
     const renderTransaction = ({ item }: { item: Transaction }) => (
-        <View style={styles.cardContainer}>
+        <TouchableOpacity 
+            style={styles.cardContainer}
+            onPress={() => handleTransactionPress(item)}
+            activeOpacity={0.7}
+        >
             <View style={styles.card}>
                 <View style={styles.cardHeader}>
                     <View style={styles.idContainer}>
                         <Ionicons name="receipt-outline" size={20} color={colors.primary} />
-                        <Title style={styles.idText}>#{item.id}</Title>
+                        <Text style={styles.idText}>#{item.id}</Text>
                     </View>
                     <StatusBadge status={item.status} />
                 </View>
@@ -74,50 +87,36 @@ export default function TransactionsScreen() {
                 <View style={styles.cardContent}>
                     <View style={styles.infoRow}>
                         <Ionicons name="calendar-outline" size={16} color={colors.gray600} />
-                        <Paragraph style={styles.infoText}>
+                        <Text style={styles.infoText}>
                             {formatDate(item.dateOfTransaction)}
-                        </Paragraph>
+                        </Text>
                     </View>
                     
                     <View style={styles.infoRow}>
                         <Ionicons name="card-outline" size={16} color={colors.gray600} />
-                        <Paragraph style={styles.infoText}>
+                        <Text style={styles.infoText}>
                             {item.paymentMethodName || "Cash"}
-                        </Paragraph>
+                        </Text>
                     </View>
                     
-                    {/* Show reference number for GCash transactions */}
                     {item.paymentMethodName?.toLowerCase() === 'gcash' && item.referenceNumber && (
                         <View style={styles.infoRow}>
                             <Ionicons name="document-text-outline" size={16} color={colors.gray600} />
-                            <Paragraph style={styles.infoText}>
+                            <Text style={styles.infoText}>
                                 Ref: {item.referenceNumber}
-                            </Paragraph>
+                            </Text>
                         </View>
                     )}
                     
                     <View style={styles.totalContainer}>
-                        <Paragraph style={styles.totalLabel}>Total:</Paragraph>
-                        <Paragraph style={styles.totalAmount}>
-                            PHP {Number(item.totalPrice).toFixed(2)}
-                        </Paragraph>
+                        <Text style={styles.totalLabel}>Total:</Text>
+                        <Text style={styles.totalAmount}>
+                            PHP {Number(item.totalPrice).toFixed(2) - Number(item.totalRefund).toFixed(2)}
+                        </Text>
                     </View>
                 </View>
-                
-                {(item.status === "completed" || item.status === "partially_refunded") && (
-                    <View style={styles.cardActions}>
-                        <Button
-                            mode="contained"
-                            onPress={() => handleRefund(item.id)}
-                            style={styles.refundButton}
-                            icon="cash-refund"
-                        >
-                            Refund
-                        </Button>
-                    </View>
-                )}
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     return (
@@ -137,6 +136,15 @@ export default function TransactionsScreen() {
                     />
                 }
             />
+
+            <Portal>
+            <TransactionModal
+                visible={modalVisible}
+                onDismiss={() => setModalVisible(false)}
+                transaction={selectedTransaction}
+                onRefund={handleRefund}
+            />
+            </Portal>
         </View>
     );
 }
@@ -206,13 +214,5 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.lg,
         fontFamily: typography.fontFamily.bold,
         color: colors.primary,
-    },
-    cardActions: {
-        padding: spacing.md,
-        borderTopWidth: 1,
-        borderTopColor: colors.gray200,
-    },
-    refundButton: {
-        backgroundColor: colors.error,
     },
 });
