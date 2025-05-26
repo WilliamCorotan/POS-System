@@ -85,59 +85,81 @@ function MainApp() {
   }
 
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarStyle: {
-            backgroundColor: colors.white,
-            borderTopWidth: 1,
-            borderTopColor: colors.gray200,
-            height: 60,
-            paddingBottom: 8,
-          },
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.gray400,
+    <Tab.Navigator
+      initialRouteName="Cart"
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          if (route.name === 'Products') {
+            iconName = focused ? 'grid' : 'grid-outline';
+          } else if (route.name === 'Cart') {
+            iconName = focused ? 'cart' : 'cart-outline';
+          } else if (route.name === 'Transactions') {
+            iconName = focused ? 'receipt' : 'receipt-outline';
+          } else if (route.name === 'Settings') {
+            iconName = focused ? 'settings' : 'settings-outline';
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.gray600,
+        tabBarStyle: {
+          elevation: 10,
+          shadowColor: colors.shadow,
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
+          borderTopWidth: 0,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+        },
+        headerStyle: {
+          backgroundColor: colors.primary,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTintColor: colors.white,
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      })}
+    >
+      <Tab.Screen 
+        name="Cart" 
+        component={CartScreen}
+        options={{
+          title: 'Shopping Cart',
         }}
-      >
-        <Tab.Screen
-          name="Cart"
-          component={CartScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="cart-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Products"
-          component={ProductsScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="grid-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Transactions"
-          component={TransactionsScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="receipt-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="settings-outline" size={size} color={color} />
-            ),
-          }}
-        />
-      </Tab.Navigator>
-    </NavigationContainer>
+      />
+      <Tab.Screen 
+        name="Products" 
+        component={ProductsScreen}
+        options={{
+          title: 'Products',
+        }}
+      />
+      <Tab.Screen 
+        name="Transactions" 
+        component={TransactionsStack}
+        options={{
+          title: 'Transactions',
+        }}
+      />
+      <Tab.Screen 
+        name="Settings" 
+        component={SettingsScreen}
+        options={{
+          title: 'Settings',
+        }}
+      />
+    </Tab.Navigator>
   );
 }
 

@@ -1,17 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useUser } from '../contexts/UserContext';
 import { colors, typography, spacing, shadows } from '../theme';
 import { Button } from '../components/ui/Button';
 import { Ionicons } from '@expo/vector-icons';
+import { useProducts } from '../hooks/useProducts';
 
 export default function SettingsScreen() {
-  const { user, clearUser } = useUser();
+  const { userId, clearUserId } = useUser();
+  const { updateSettings } = useProducts();
+  const [syncing, setSyncing] = useState(false);
 
-  if (!user) {
-    return null;
-  }
+  const handleSync = async () => {
+    if (!userId) return;
+    setSyncing(true);
+    try {
+      await updateSettings(userId);
+    } catch (error) {
+      console.error('Error syncing settings:', error);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -67,32 +78,20 @@ export default function SettingsScreen() {
             </View>
             <Text style={styles.settingValue}>1.0.0</Text>
           </View>
-        </View>
-      </View>
-      
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Support</Text>
-        </View>
-        
-        <View style={styles.card}>
-          <View style={styles.supportRow}>
-            <Ionicons name="mail-outline" size={24} color={colors.primary} />
-            <View style={styles.supportInfo}>
-              <Text style={styles.supportTitle}>Contact Support</Text>
-              <Text style={styles.supportDescription}>Get help with your account</Text>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Sync Data</Text>
+              <Text style={styles.settingDescription}>Refresh settings and data</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-          </View>
-          
-          <View style={styles.supportRow}>
-            <Ionicons name="document-text-outline" size={24} color={colors.primary} />
-            <View style={styles.supportInfo}>
-              <Text style={styles.supportTitle}>Documentation</Text>
-              <Text style={styles.supportDescription}>Learn how to use the app</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            <Button
+              title={syncing ? "Syncing..." : "Sync Now"}
+              variant="primary"
+              size="small"
+              onPress={handleSync}
+              loading={syncing}
+              disabled={syncing}
+            />
           </View>
         </View>
       </View>

@@ -15,6 +15,11 @@ import { useProducts } from "../hooks/useProducts";
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows } from "../theme";
 import { Button } from "../components/ui/Button";
+import { savePendingTransaction, getPendingTransactions, removePendingTransaction, PendingTransaction } from "../utils/offlineTransactions";
+import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const LAST_SYNC_KEY = 'last_sync_timestamp';
 import { RequireAuth } from "../components/auth/RequireAuth";
 
 export default function CartScreen() {
@@ -34,13 +39,57 @@ export default function CartScreen() {
     const [checkoutVisible, setCheckoutVisible] = useState(false);
     const [manualCodeVisible, setManualCodeVisible] = useState(false);
     const [manualCode, setManualCode] = useState("");
+    const [isOnline, setIsOnline] = useState(true);
+    const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([]);
+    const [syncing, setSyncing] = useState(false);
+    const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+
+    useEffect(() => {
+        const unsubscribe = NetInfo.addEventListener(state => {
+            setIsOnline(state.isConnected ?? false);
+        });
+
+        loadPendingTransactions();
+        loadLastSyncTime();
+
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
+    const loadLastSyncTime = async () => {
+        try {
+            const timestamp = await AsyncStorage.getItem(LAST_SYNC_KEY);
+            setLastSyncTime(timestamp ? parseInt(timestamp) : null);
+        } catch (error) {
+            console.error('Error loading last sync time:', error);
+        }
+    };
+
+    const updateLastSyncTime = async () => {
+        try {
+            const timestamp = Date.now();
+            await AsyncStorage.setItem(LAST_SYNC_KEY, timestamp.toString());
+            setLastSyncTime(timestamp);
+        } catch (error) {
+            console.error('Error updating last sync time:', error);
+        }
+    };
+
+    const loadPendingTransactions = async () => {
+        const pending = await getPendingTransactions();
+        setPendingTransactions(pending);
+    };
 
     const handleCheckout = async (
         paymentMethodId: number,
         cashReceived: number,
         referenceNumber?: string
     ) => {
-        if (!user) return;
+        if (!user) {
+            alert("User ID is required");
+            return;
+        }
 
         const transaction = {
             payment_method_id: paymentMethodId,
@@ -53,9 +102,58 @@ export default function CartScreen() {
             user_id: user.id
         };
 
-        await createTransaction(user.id, transaction);
-        await clearCart();
-        setCheckoutVisible(false);
+        try {
+            if (isOnline) {
+                await createTransaction(user.clerkId, transaction);
+            } else {
+                await savePendingTransaction(transaction);
+                await loadPendingTransactions();
+            }
+            clearCart();
+            setCheckoutVisible(false);
+            alert("Transaction completed successfully!");
+        } catch (error) {
+            console.error("Error during checkout:", error);
+            alert("Error during checkout. Please try again.");
+        }
+    };
+
+    const handleSync = async () => {
+        if (!user) {
+            alert("User ID is required");
+            return;
+        }
+
+        if (!isOnline) {
+            alert("No internet connection. Please try again when online.");
+            return;
+        }
+
+        setSyncing(true);
+        try {
+            for (const pendingTx of pendingTransactions) {
+                try {
+                    await createTransaction(user.clerkId, pendingTx);
+                    await removePendingTransaction(pendingTx.localId);
+                } catch (error) {
+                    console.error(`Error syncing transaction ${pendingTx.localId}:`, error);
+                }
+            }
+            await loadPendingTransactions();
+            await updateLastSyncTime();
+            alert("Sync completed successfully!");
+        } catch (error) {
+            console.error("Error during sync:", error);
+            alert("Error during sync. Please try again.");
+        } finally {
+            setSyncing(false);
+        }
+    };
+
+    const formatLastSyncTime = () => {
+        if (!lastSyncTime) return 'Never';
+        const date = new Date(lastSyncTime);
+        return date.toLocaleString();
     };
 
     const handleManualCodeSubmit = () => {
@@ -116,7 +214,7 @@ export default function CartScreen() {
 
     const getSettings = async () => {
         if (!user) return;
-        const paymentMethods = await fetchPaymentMethods(user.id);
+        const paymentMethods = await fetchPaymentMethods(user.clerkId);
         setPaymentMethods(paymentMethods);
     };
 
@@ -134,45 +232,71 @@ export default function CartScreen() {
     }
 
     return (
-        <RequireAuth fallbackMessage="Please sign in to manage your cart">
-            <View style={styles.container}>
-                {items.length > 0 ? (
-                    <>
-                        <FlatList
-                            data={items}
-                            renderItem={renderCartItem}
-                            keyExtractor={(item) => item.id.toString()}
-                            contentContainerStyle={styles.cartList}
-                            ListFooterComponent={() => (
-                                <View style={styles.footer}>
-                                    <View style={styles.totalRow}>
-                                        <Text style={styles.totalLabel}>Total:</Text>
-                                        <Text style={styles.totalAmount}>
-                                            PHP {getTotal().toFixed(2)}
-                                        </Text>
-                                    </View>
-                                    
-                                    <Button
-                                        title="Checkout"
-                                        variant="primary"
-                                        size="large"
-                                        fullWidth
-                                        onPress={() => setCheckoutVisible(true)}
-                                        style={styles.checkoutButton}
-                                    />
-                                </View>
-                            )}
-                        />
-                    </>
-                ) : (
-                    <View style={styles.emptyCart}>
-                        <Ionicons name="cart-outline" size={80} color={colors.gray400} />
-                        <Text style={styles.emptyCartText}>Your cart is empty</Text>
-                        <Text style={styles.emptyCartSubtext}>
-                            Scan or search for products to add them to your cart
+        <View style={styles.container}>
+            {!isOnline && (
+                <View style={styles.offlineBanner}>
+                    <Ionicons name="cloud-offline-outline" size={20} color={colors.white} />
+                    <Text style={styles.offlineText}>You are offline</Text>
+                </View>
+            )}
+
+            {pendingTransactions.length > 0 && (
+                <View style={styles.syncBanner}>
+                    <View style={styles.syncInfo}>
+                        <Text style={styles.syncText}>
+                            {pendingTransactions.length} pending transaction{pendingTransactions.length > 1 ? 's' : ''}
+                        </Text>
+                        <Text style={styles.lastSyncText}>
+                            Last sync: {formatLastSyncTime()}
                         </Text>
                     </View>
-                )}
+                    <Button
+                        title={syncing ? "Syncing..." : "Sync Now"}
+                        variant="primary"
+                        size="small"
+                        onPress={handleSync}
+                        disabled={syncing || !isOnline}
+                    />
+                </View>
+            )}
+
+            {items.length > 0 ? (
+                <>
+                    <FlatList
+                        data={items}
+                        renderItem={renderCartItem}
+                        keyExtractor={(item) => item.id.toString()}
+                        contentContainerStyle={styles.cartList}
+                        ListFooterComponent={() => (
+                            <View style={styles.footer}>
+                                <View style={styles.totalRow}>
+                                    <Text style={styles.totalLabel}>Total:</Text>
+                                    <Text style={styles.totalAmount}>
+                                        PHP {getTotal().toFixed(2)}
+                                    </Text>
+                                </View>
+                                
+                                <Button
+                                    title="Checkout"
+                                    variant="primary"
+                                    size="large"
+                                    fullWidth
+                                    onPress={() => setCheckoutVisible(true)}
+                                    style={styles.checkoutButton}
+                                />
+                            </View>
+                        )}
+                    />
+                </>
+            ) : (
+                <View style={styles.emptyCart}>
+                    <Ionicons name="cart-outline" size={80} color={colors.gray400} />
+                    <Text style={styles.emptyCartText}>Your cart is empty</Text>
+                    <Text style={styles.emptyCartSubtext}>
+                        Scan or search for products to add them to your cart
+                    </Text>
+                </View>
+            )}
 
                 <View style={styles.buttonContainer}>
                     <Button
@@ -229,7 +353,6 @@ export default function CartScreen() {
                     </Dialog>
                 </Portal>
             </View>
-        </RequireAuth>
     );
 }
 
@@ -361,5 +484,36 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.base,
         color: colors.textSecondary,
         textAlign: 'center',
+    },
+    offlineBanner: {
+        backgroundColor: colors.error,
+        padding: spacing.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.xs,
+    },
+    offlineText: {
+        color: colors.white,
+        fontFamily: typography.fontFamily.medium,
+    },
+    syncBanner: {
+        backgroundColor: colors.warning,
+        padding: spacing.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    syncInfo: {
+        flex: 1,
+    },
+    syncText: {
+        color: colors.textPrimary,
+        fontFamily: typography.fontFamily.medium,
+    },
+    lastSyncText: {
+        fontSize: typography.fontSize.sm,
+        color: colors.textSecondary,
+        marginTop: spacing.xs / 2,
     },
 });
