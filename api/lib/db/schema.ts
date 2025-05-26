@@ -17,7 +17,7 @@ export const payments = sqliteTable("payments", {
 
 export const users = sqliteTable("users", {
     id: integer("id").primaryKey(),
-    clerkId: text("clerk_id").notNull().unique(),
+    clerkId: text("clerk_id").notNull(),
     name: text("name"),
     email: text("email"),
     password: text("password"),
@@ -112,6 +112,7 @@ export const transactions = sqliteTable("transactions", {
     status: text("status").notNull().default("active"),
     clerkId: text("clerk_id").notNull(),
     referenceNumber: text("reference_number"),
+    userId: integer("user_id").references(() => users.id),
 });
 
 export const orders = sqliteTable("orders", {

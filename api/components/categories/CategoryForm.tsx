@@ -50,7 +50,7 @@ export function CategoryForm({
     isLoading = false,
 }: CategoryFormProps) {
     const [formData, setFormData] = useState<CategoryFormData>(defaultFormData);
-    const { categories } = useCategories();
+    const { categories, refreshCategories } = useCategories();
 
     // Filter out the current category and its subcategories to prevent circular references
     const availableParentCategories = categories.filter((category) => {
@@ -68,6 +68,8 @@ export function CategoryForm({
         } else {
             setFormData(defaultFormData);
         }
+
+        refreshCategories();
     }, [initialData, open]);
 
     const handleSubmit = async (e: React.FormEvent) => {

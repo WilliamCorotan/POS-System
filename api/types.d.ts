@@ -69,6 +69,12 @@ export type TransactionItem = {
     refundStatus?: "none" | "partial" | "full";
 };
 
+export type User = {
+    id: number;
+    name: string;
+    email: string;
+};
+
 export type Transaction = {
     id: number;
     dateOfTransaction: string;
@@ -81,8 +87,10 @@ export type Transaction = {
     items: string;
     paymentMethodName?: string;
     totalRefund: number;
+    refundedItems?: string;
     refundReasons?: string;
     totalCost?: number;
+    user?: User;
 };
 
 export type ProductFormData = {

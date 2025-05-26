@@ -5,6 +5,7 @@ import {
     payments,
     products,
     refunds,
+    users,
 } from "@/lib/db/schema";
 import { eq, sql, getTableColumns, and } from "drizzle-orm";
 
@@ -18,6 +19,7 @@ type TransactionFromApp = {
     email_to?: string;
     clerk_id?: string;
     reference_number?: string;
+    user_id?: number;
 };
 
 type TransactionItemFromApp = {
@@ -45,6 +47,21 @@ export async function getTransactions(userId: string) {
                 JOIN ${products} ON ${orders.productId} = ${products.id}
                 WHERE ${orders.transactionId} = ${transactions.id}
             )`.as("items"),
+            refundedItems: sql`(
+                SELECT json_group_array(json_object(
+                    'id', ${refunds.id},
+                    'productId', ri.product_id,
+                    'productName', ${products.name},
+                    'quantity', ri.quantity,
+                    'amount', ri.amount,
+                    'reason', ${refunds.reason}
+                ))
+                FROM ${refunds}
+                LEFT JOIN refund_items ri ON ${refunds.id} = ri.refund_id
+                LEFT JOIN ${products} ON ri.product_id = ${products.id}
+                WHERE ${refunds.transactionId} = ${transactions.id}
+                GROUP BY ${refunds.transactionId}
+            )`.as("refundedItems"),
             paymentMethodName: payments.name,
             totalRefund: sql`(
                 SELECT COALESCE(SUM(${refunds.totalAmount}), 0)
@@ -63,6 +80,15 @@ export async function getTransactions(userId: string) {
                 JOIN ${products} ON ${orders.productId} = ${products.id}
                 WHERE ${orders.transactionId} = ${transactions.id}
             )`.as("totalCost"),
+            user: sql`(
+                SELECT json_object(
+                    'id', ${users.id},
+                    'name', ${users.name},
+                    'email', ${users.email}
+                )
+                FROM ${users}
+                WHERE ${users.id} = ${transactions.userId}
+            )`.as("user"),
         })
         .from(transactions)
         .leftJoin(payments, eq(transactions.paymentMethodId, payments.id))
@@ -101,6 +127,7 @@ export async function createTransaction(
                 cashReceived: parseFloat(data.cash_received),
                 referenceNumber: data.reference_number ?? null,
                 clerkId: userId,
+                userId: data.user_id ? parseInt(data.user_id.toString()) : null,
             };
 
             const newTransaction = await tx

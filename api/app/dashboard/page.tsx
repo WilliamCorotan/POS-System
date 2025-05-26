@@ -117,24 +117,29 @@ export default function DashboardPage() {
             0
         );
 
-        // Calculate total cost from items (excluding refunded items)
+        // Calculate total cost from transactions (excluding refunds)
         const totalCost = filteredTransactions.reduce((sum, transaction) => {
             try {
-                const items = JSON.parse(
-                    transaction.items || "[]"
-                ) as TransactionItem[];
-                const refundedAmount = transaction.totalRefund || 0;
+                const items = JSON.parse(transaction.items || '[]') as TransactionItem[];
+                const refundedItems = JSON.parse(transaction.refundedItems || '[]') as Array<{
+                    productId: number;
+                    quantity: number;
+                    amount: number;
+                }>;
 
-                // Adjust cost based on refund ratio
-                const itemsCost = items.reduce(
-                    (itemSum, item) =>
-                        itemSum + item.quantity * (item.productBuyPrice || 0),
-                    0
-                );
+                // Calculate cost of regular items
+                const itemsCost = items.reduce((itemSum, item) => 
+                    itemSum + (item.quantity * item.productBuyPrice), 0);
 
-                return sum + itemsCost - refundedAmount;
+                // Subtract cost of refunded items
+                const refundedCost = refundedItems.reduce((refundSum, refund) => {
+                    const matchingItem = items.find(item => item.productId === refund.productId);
+                    return refundSum + ((matchingItem?.productBuyPrice || 0) * refund.quantity);
+                }, 0);
+
+                return sum + (itemsCost - refundedCost);
             } catch (error) {
-                console.error("Error parsing transaction items:", error);
+                console.error("Error calculating transaction cost:", error);
                 return sum;
             }
         }, 0);
@@ -176,35 +181,50 @@ export default function DashboardPage() {
 
         filteredTransactions.forEach((transaction) => {
             try {
-                const items = JSON.parse(
-                    transaction.items || "[]"
-                ) as TransactionItem[];
-                const refundRatio = transaction.totalRefund
-                    ? transaction.totalRefund / transaction.totalPrice
-                    : 0;
+                // Parse regular items
+                const items = JSON.parse(transaction.items || "[]") as TransactionItem[];
+                
+                // Parse refunded items
+                const refundedItems = JSON.parse(transaction.refundedItems || "[]") as Array<{
+                    productId: number;
+                    quantity: number;
+                    amount: number;
+                }>;
+
+                // Create a map of refunded quantities by product ID
+                const refundedQuantities = new Map<number, number>();
+                refundedItems.forEach((refundItem) => {
+                    refundedQuantities.set(
+                        refundItem.productId,
+                        (refundedQuantities.get(refundItem.productId) || 0) + refundItem.quantity
+                    );
+                });
 
                 items.forEach((item) => {
-                    // Adjust quantities and amounts based on refund ratio
-                    const adjustedQuantity = item.quantity * (1 - refundRatio);
-                    const adjustedSales =
-                        adjustedQuantity * item.productSellPrice;
-                    const adjustedCost =
-                        adjustedQuantity * item.productBuyPrice;
+                    // Get refunded quantity for this product
+                    const refundedQty = refundedQuantities.get(item.productId) || 0;
+                    // Calculate actual quantity sold (original - refunded)
+                    const actualQuantity = item.quantity - refundedQty;
+                    
+                    if (actualQuantity <= 0) return; // Skip if all items were refunded
+
+                    const totalSales = actualQuantity * item.productSellPrice;
+                    const totalCost = actualQuantity * item.productBuyPrice;
 
                     const existing = itemMap.get(item.productId);
                     if (existing) {
-                        existing.quantity += adjustedQuantity;
-                        existing.totalSales += adjustedSales;
-                        existing.profit += adjustedSales - adjustedCost;
+                        existing.quantity += actualQuantity;
+                        existing.totalSales += totalSales;
+                        existing.profit += totalSales - totalCost;
                     } else {
                         itemMap.set(item.productId, {
                             id: item.productId,
                             name: item.productName,
-                            quantity: adjustedQuantity,
-                            totalSales: adjustedSales,
+                            quantity: actualQuantity,
+                            totalSales: totalSales,
                             buyPrice: item.productBuyPrice,
                             sellPrice: item.productSellPrice,
-                            profit: adjustedSales - adjustedCost,
+                            profit: totalSales - totalCost,
                         });
                     }
                 });
@@ -530,7 +550,7 @@ export default function DashboardPage() {
                                                 {item.name}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {item.quantity.toFixed(2)}
+                                                {item.quantity}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 PHP {item.sellPrice.toFixed(2)}
